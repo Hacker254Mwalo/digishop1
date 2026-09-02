@@ -40,11 +40,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="kicker-bar" aria-label="Digital Electronics benefits">
+      <section className="kicker-bar" aria-label="Quick service actions">
         <div className="container kicker-bar-inner">
-          <div className="kicker-item"><Microscope size={22} /><div><strong>Diagnose before we repair</strong><span>Know what is wrong and why</span></div></div>
-          <div className="kicker-item"><ShieldCheck size={22} /><div><strong>Service you can follow</strong><span>Get a ticket and clear stages</span></div></div>
-          <div className="kicker-item"><MessageCircle size={22} /><div><strong>Talk to the desk directly</strong><span>Questions? We are one message away</span></div></div>
+          <Link className="kicker-item kicker-link" href="/book"><Microscope size={22} /><div><strong>Book a repair</strong><span>Start with your device details</span></div><ArrowRight size={15} /></Link>
+          <Link className="kicker-item kicker-link" href="/track"><ShieldCheck size={22} /><div><strong>Track a repair</strong><span>Use your ticket number anytime</span></div><ArrowRight size={15} /></Link>
+          <Link className="kicker-item kicker-link" href="/shop"><MessageCircle size={22} /><div><strong>Shop spares</strong><span>Ask about parts and availability</span></div><ArrowRight size={15} /></Link>
         </div>
       </section>
 
