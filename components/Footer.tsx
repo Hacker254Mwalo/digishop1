@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { Clock3, MapPin, MessageCircle } from "lucide-react";
-import { site } from "@/lib/site";
+import { normalizeKenyanNumber, site } from "@/lib/site";
 
 export function Footer() {
   const whatsappHref = site.whatsappNumber
-    ? `https://wa.me/${site.whatsappNumber.replace(/\D/g, "")}`
+    ? `https://wa.me/${normalizeKenyanNumber(site.whatsappNumber)}`
     : "/book";
   return (
     <footer className="site-footer">

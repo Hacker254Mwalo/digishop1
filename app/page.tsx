@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, CheckCircle2, Clock3, Laptop, MessageCircle, Microscope, PhoneCall, ShieldCheck, Smartphone, Wrench } from "lucide-react";
-import { gallery, site } from "@/lib/site";
+import { gallery, normalizeKenyanNumber, site } from "@/lib/site";
 
 const callHref = site.phoneHref ? `tel:${site.phoneHref}` : "#contact";
-const whatsappHref = site.whatsappNumber ? `https://wa.me/${site.whatsappNumber.replace(/\D/g, "")}` : "/book";
+const whatsappHref = site.whatsappNumber ? `https://wa.me/${normalizeKenyanNumber(site.whatsappNumber)}` : "/book";
 
 export default function HomePage() {
   return (

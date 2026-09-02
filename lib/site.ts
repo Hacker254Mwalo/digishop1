@@ -3,9 +3,9 @@ export const site = {
   shortName: "Digital Electronics",
   location: "Siaya Town, Kenya",
   tagline: "Expert Phone Repair, Spares, Accessories & Laptop Solutions in Siaya.",
-  phoneDisplay: process.env.NEXT_PUBLIC_SHOP_PHONE_DISPLAY || "Add shop phone",
-  phoneHref: process.env.NEXT_PUBLIC_SHOP_PHONE || "",
-  whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "",
+  phoneDisplay: process.env.NEXT_PUBLIC_SHOP_PHONE_DISPLAY || "0718 114 009",
+  phoneHref: process.env.NEXT_PUBLIC_SHOP_PHONE || "0718114009",
+  whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "254718114009",
   address: process.env.NEXT_PUBLIC_SHOP_ADDRESS || "Siaya Town, Siaya County, Kenya",
   mapsQuery: process.env.NEXT_PUBLIC_MAPS_QUERY || "Digital Electronics, Siaya, Kenya",
   hours: [
@@ -175,8 +175,15 @@ export function createTicketNumber() {
   return `DE-REP-${seed}${random}`;
 }
 
+export function normalizeKenyanNumber(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.startsWith("0")) return `254${digits.slice(1)}`;
+  if (digits.startsWith("254")) return digits;
+  return digits;
+}
+
 export function getWhatsAppUrl(message: string) {
-  const number = site.whatsappNumber.replace(/\D/g, "");
+  const number = normalizeKenyanNumber(site.whatsappNumber);
   const base = number ? `https://wa.me/${number}` : "https://wa.me/";
   return `${base}?text=${encodeURIComponent(message)}`;
 }
