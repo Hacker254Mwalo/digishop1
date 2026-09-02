@@ -11,9 +11,8 @@ export function Footer() {
       <div className="container">
         <div className="footer-grid">
           <div className="footer-brand">
-            <Link href="/" className="brand">
-              <span className="brand-mark">DE</span>
-              <span>Digital Electronics</span>
+            <Link href="/" className="brand" aria-label="Digital Electronics home">
+              <span className="brand-logo-wrap"><img className="brand-logo" src="/images/digital-electronics-exterior-sign.jpg" alt="Digital Electronics" /></span>
             </Link>
             <p>Phone repair, laptop support and replacement parts from our service counter in Siaya.</p>
             <a className="button button-secondary button-small" href={whatsappHref}>
