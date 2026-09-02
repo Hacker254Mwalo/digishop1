@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Phone Screens, Batteries & Laptop Spares",
-  description: "Browse phone screens, charging ports, batteries, laptop spares and accessories from Digital Electronics in Siaya.",
+  description: "Browse phone screens, charging ports, batteries, laptop spares and accessories from Digital Phone Hub Repair & Electronics, supplied across Kenya.",
   alternates: { canonical: "/shop" },
   openGraph: {
-    title: "Phone Screens, Batteries & Laptop Spares | Digital Electronics",
+    title: "Phone Screens, Batteries & Laptop Spares in Kenya | Digital Phone Hub Repair & Electronics",
     description: "Find common replacement parts and accessories, then confirm compatibility and fulfillment with the team.",
     url: "/shop",
   },

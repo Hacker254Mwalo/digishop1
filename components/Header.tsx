@@ -7,9 +7,9 @@ export function Header() {
   return (
     <header className="site-header">
       <div className="container header-inner">
-        <Link href="/" className="brand" aria-label="Digital Electronics home">
-          <span className="brand-mark" aria-hidden="true">DE</span>
-          <span className="brand-copy"><strong>Digital</strong><span>Electronics</span></span>
+        <Link href="/" className="brand" aria-label="Digital Phone Hub Repair & Electronics home">
+          <span className="brand-mark" aria-hidden="true">DPH</span>
+          <span className="brand-copy"><strong>Digital Phone Hub</strong><span>Repair & Electronics</span></span>
         </Link>
         <nav className="nav" aria-label="Main navigation">
           <Link className="nav-link" href="/">Home</Link>
@@ -19,7 +19,7 @@ export function Header() {
           <Link className="nav-link" href="/contact">Visit us</Link>
         </nav>
         <div className="header-actions">
-          <a className="header-phone" href={callHref} aria-label={`Call Digital Electronics on ${site.phoneDisplay}`}>
+          <a className="header-phone" href={callHref} aria-label={`Call Digital Phone Hub Repair & Electronics on ${site.phoneDisplay}`}>
             <PhoneCall size={15} /> <span>{site.phoneDisplay}</span>
           </a>
           <Link className="button button-primary" href="/book">

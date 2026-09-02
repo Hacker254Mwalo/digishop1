@@ -1,14 +1,14 @@
 export const site = {
-  name: "Digital Electronics",
-  shortName: "Digital Electronics",
+  name: "Digital Phone Hub Repair & Electronics",
+  shortName: "Digital Phone Hub",
   location: "Siaya Town, Kenya",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://digishop1.vercel.app",
-  tagline: "Expert phone repair, spares, accessories and laptop solutions in Siaya.",
+  tagline: "Phone repair, laptop support and spare parts supplied across Kenya from Siaya.",
   phoneDisplay: process.env.NEXT_PUBLIC_SHOP_PHONE_DISPLAY || "0718 114 009",
   phoneHref: process.env.NEXT_PUBLIC_SHOP_PHONE || "0718114009",
   whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "254718114009",
   address: process.env.NEXT_PUBLIC_SHOP_ADDRESS || "Siaya Town, Siaya County, Kenya",
-  mapsQuery: process.env.NEXT_PUBLIC_MAPS_QUERY || "Digital Electronics, Siaya, Kenya",
+  mapsQuery: process.env.NEXT_PUBLIC_MAPS_QUERY || "Digital Phone Hub Repair & Electronics, Siaya, Kenya",
   hours: [
     ["Monday – Friday", "8:00 AM – 6:30 PM"],
     ["Saturday", "8:30 AM – 5:00 PM"],
@@ -20,15 +20,15 @@ export const site = {
 export const gallery = [
   {
     src: "/images/digital-electronics-exterior-sign.jpg",
-    alt: "Digital Electronics exterior sign with phone repair, accessories and laptop repair services",
+    alt: "Digital Phone Hub Repair & Electronics storefront sign for phone repair and spare parts in Siaya",
     label: "Storefront",
     title: "The signal outside",
-    description: "A clear landmark for the Digital Electronics service and spares experience in Siaya.",
+    description: "A clear landmark for the Digital Phone Hub Repair & Electronics service and spares experience in Siaya.",
     className: "gallery-wide",
   },
   {
     src: "/images/technician-counter.jpg",
-    alt: "Digital Electronics technician seated at the repair and service counter with accessories displayed behind him",
+    alt: "Digital Phone Hub Repair & Electronics technician at the repair and service counter in Siaya",
     label: "Repair operation",
     title: "Where diagnosis begins",
     description: "A working counter for intake, device checks and repair conversations.",
@@ -36,7 +36,7 @@ export const gallery = [
   },
   {
     src: "/images/customer-service-counter.jpg",
-    alt: "Digital Electronics customer service counter with laptop, accessories and display cabinets",
+    alt: "Digital Phone Hub Repair & Electronics customer service counter with laptop and spare parts",
     label: "Parts selection",
     title: "The parts in reach",
     description: "A practical selection of accessories and replacement parts for everyday devices.",
@@ -148,7 +148,7 @@ export type Ticket = {
 
 export const demoTickets: Ticket[] = [
   {
-    ticket: "DE-REP-1049",
+    ticket: "DPH-REP-1049",
     clientName: "Demo customer",
     phone: "",
     deviceType: "Phone",
@@ -157,7 +157,7 @@ export const demoTickets: Ticket[] = [
     createdAt: "2026-09-02T08:00:00.000Z",
   },
   {
-    ticket: "DE-REP-1050",
+    ticket: "DPH-REP-1050",
     clientName: "Demo customer",
     phone: "",
     deviceType: "Laptop",
@@ -174,7 +174,7 @@ export function formatKes(value: number) {
 export function createTicketNumber() {
   const seed = Date.now().toString().slice(-4);
   const random = Math.floor(Math.random() * 10).toString();
-  return `DE-REP-${seed}${random}`;
+  return `DPH-REP-${seed}${random}`;
 }
 
 export function normalizeKenyanNumber(value: string) {

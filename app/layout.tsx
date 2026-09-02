@@ -7,25 +7,25 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: "Digital Electronics | Phone & Laptop Repair in Siaya",
-    template: "%s | Digital Electronics",
+    default: "Digital Phone Hub Repair & Electronics | Phone Repair in Siaya",
+    template: "%s | Digital Phone Hub Repair & Electronics",
   },
   description:
-    "Digital Electronics provides phone repair, laptop support, replacement screens, batteries, charging parts and accessories in Siaya, Kenya.",
+    "Digital Phone Hub Repair & Electronics provides phone repair, laptop support and replacement screens, batteries, charging parts and accessories in Siaya, with spare parts supplied across Kenya.",
   keywords: [
     "phone repair Siaya",
     "laptop repair Siaya",
     "phone screen replacement Siaya",
     "phone accessories Siaya",
     "laptop spares Kenya",
-    "Digital Electronics Siaya",
+    "Digital Phone Hub Repair & Electronics Siaya",
   ],
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Digital Electronics | Phone & Laptop Repair in Siaya",
-    description: "Repair, replacement parts and device support with a clearer digital experience.",
+    title: "Digital Phone Hub Repair & Electronics | Phone Repair in Siaya",
+    description: "Phone repair, laptop support and spare parts from Digital Phone Hub Repair & Electronics in Siaya, Kenya.",
     url: site.url,
-    siteName: "Digital Electronics",
+    siteName: "Digital Phone Hub Repair & Electronics",
     type: "website",
     locale: "en_KE",
     images: [
@@ -33,14 +33,14 @@ export const metadata: Metadata = {
         url: "/images/digital-electronics-exterior-sign.jpg",
         width: 1400,
         height: 591,
-        alt: "Digital Electronics exterior sign in Siaya",
+        alt: "Digital Phone Hub Repair & Electronics exterior sign in Siaya",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Digital Electronics | Phone & Laptop Repair in Siaya",
-    description: "Repair, parts and device support from Digital Electronics in Siaya, Kenya.",
+    title: "Digital Phone Hub Repair & Electronics | Phone Repair in Siaya",
+    description: "Phone repair, electronics support and spare parts from Siaya, Kenya.",
     images: ["/images/digital-electronics-exterior-sign.jpg"],
   },
   robots: {

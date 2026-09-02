@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Track Your Repair Ticket",
-  description: "Check the latest stage of your Digital Electronics phone or laptop repair using your DE ticket number.",
+  description: "Check the latest stage of your Digital Phone Hub Repair & Electronics phone or laptop repair using your DPH ticket number.",
   alternates: { canonical: "/track" },
   openGraph: {
-    title: "Track Your Repair Ticket | Digital Electronics",
+    title: "Track Your Repair Ticket | Digital Phone Hub Repair & Electronics",
     description: "Follow your repair from received to diagnostics, repair in progress and ready for pickup.",
     url: "/track",
   },

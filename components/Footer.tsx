@@ -11,11 +11,11 @@ export function Footer() {
       <div className="container">
         <div className="footer-grid">
           <div className="footer-brand">
-            <Link href="/" className="brand footer-brand-lockup" aria-label="Digital Electronics home">
-              <span className="brand-mark" aria-hidden="true">DE</span>
-              <span className="brand-copy"><strong>Digital</strong><span>Electronics</span></span>
+            <Link href="/" className="brand footer-brand-lockup" aria-label="Digital Phone Hub Repair & Electronics home">
+              <span className="brand-mark" aria-hidden="true">DPH</span>
+              <span className="brand-copy"><strong>Digital Phone Hub</strong><span>Repair & Electronics</span></span>
             </Link>
-            <p>Device repair, tested spares and practical technical support for people, teams and businesses across Kenya.</p>
+            <p>Phone repair and in-person device support in Siaya, with spare parts and accessories supplied across Kenya.</p>
             <a className="button button-secondary button-small" href={whatsappHref}>
               <MessageCircle size={14} /> Chat with the team <ArrowUpRight size={14} />
             </a>
@@ -30,7 +30,7 @@ export function Footer() {
             </div>
           </div>
           <div>
-            <div className="footer-title">Digital Electronics, Siaya</div>
+            <div className="footer-title">Digital Phone Hub Repair & Electronics, Siaya</div>
             <div className="footer-links">
               <span><MapPin size={12} style={{ verticalAlign: "-2px", marginRight: 5 }} />{site.address}</span>
               <span><Clock3 size={12} style={{ verticalAlign: "-2px", marginRight: 5 }} />Mon–Sat service hours</span>
@@ -39,8 +39,8 @@ export function Footer() {
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} Digital Electronics. All rights reserved.</span>
-          <span>Professional device care, connected to Siaya.</span>
+          <span>© {new Date().getFullYear()} Digital Phone Hub Repair & Electronics. All rights reserved.</span>
+          <span>Phone repair in Siaya. Spare parts supplied across Kenya.</span>
         </div>
       </div>
     </footer>
