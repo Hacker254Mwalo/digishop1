@@ -607,3 +607,72 @@ body { background: #f6f8fc; }
   .hero-premium::before { background-size: 32px 32px; }
   .service-console-item { background: rgba(255,255,255,.88); }
 }
+
+/* Dark premium surface system: no white page fields; color, depth and contrast carry the experience. */
+:root { --surface: #0a1535; --surface-2: #0d1b42; --ink: #edf3ff; --muted: #9aabd0; --line: rgba(143,174,224,.2); --sky: #142958; --navy: #08122d; --navy-2: #173c83; }
+body { background: #08122d; color: #edf3ff; }
+h1, h2, h3, h4 { color: #f2f6ff; }
+p { color: #aebcda; }
+.site-header { background: rgba(8,18,45,.93); border-bottom-color: rgba(135,176,239,.18); box-shadow: 0 10px 32px rgba(1,7,23,.26); }
+.brand-copy strong { color: #f4f7ff; }
+.brand-copy span, .nav-link { color: #aebfdf; }
+.nav-link:hover, .nav-link.active { color: #60d9ff; }
+.header-phone { color: #dce8ff; }
+.header-phone svg { color: #55d6ff; }
+.hero-premium { background: radial-gradient(circle at 84% 8%, rgba(59,207,255,.27), transparent 26%), radial-gradient(circle at 10% 78%, rgba(129,85,244,.28), transparent 32%), linear-gradient(125deg, #070f2c 0%, #132968 52%, #0d5b9f 100%); }
+.signal-band { background: linear-gradient(90deg, #080f2b 0%, #101c48 52%, #122d66 100%); }
+.service-console, .intro-section, .service-section, .split-section, .gallery-section, .faq-section { background: #0d1a3d; color: #edf3ff; }
+.service-console { background: radial-gradient(circle at 10% 0%, rgba(57,190,255,.12), transparent 28%), linear-gradient(135deg, #0e1c42 0%, #101c49 58%, #211a4f 100%); border-bottom-color: rgba(145,182,235,.16); }
+.service-console::before { opacity: .2; background-image: radial-gradient(#6ebcf2 .9px, transparent .9px); }
+.service-console-heading p, .intro-heading p, .section-heading p, .service-card p, .standard-row span, .gallery-content p, .faq-item p { color: #aebcda; }
+.service-console-item { background: rgba(15,31,71,.84); border-color: rgba(145,182,235,.18); }
+.service-console-item:hover { background: #172c61; box-shadow: 0 15px 32px rgba(1,7,23,.25); }
+.service-console-item strong, .service-console-item small, .service-console-number { color: #edf3ff; }
+.service-console-item small { color: #9fb0d2; }
+.service-console-foot { color: #9fb0d2; }
+.intro-panel { background: linear-gradient(145deg, #162968 0%, #264cab 55%, #7048be 100%); }
+.service-card { background: #122249 !important; border-color: rgba(145,182,235,.2); box-shadow: 0 15px 34px rgba(1,7,23,.22); }
+.service-card:nth-child(1) { background: linear-gradient(160deg, #122758 55%, #123b72 100%) !important; }
+.service-card:nth-child(2) { background: linear-gradient(160deg, #172650 55%, #34256a 100%) !important; }
+.service-card:nth-child(3) { background: linear-gradient(160deg, #2a224f 55%, #5d2f54 100%) !important; }
+.service-card h3, .service-card .service-index { color: #f2f6ff; }
+.service-standard-panel, .process-panel { background: linear-gradient(145deg, #142650, #1b2451); border-color: rgba(145,182,235,.2); }
+.standard-panel-header { border-bottom-color: rgba(145,182,235,.2); }
+.standard-panel-header h3, .standard-row strong { color: #edf3ff; }
+.standard-row { border-bottom-color: rgba(145,182,235,.16); }
+.check-list li { color: #b9c6e0; }
+.gallery-section { background: #0b1738; }
+.gallery-card { background: #142653; }
+.faq-section { border-top-color: rgba(145,182,235,.18); }
+.faq-list, .faq-item { border-color: rgba(145,182,235,.2); }
+.faq-item summary { color: #edf3ff; }
+.cta-band { background: linear-gradient(120deg, #0c1740 0%, #202f78 54%, #563a8d 100%); }
+.cta-copy p { color: #b8c7e4; }
+.button-ghost { color: #d8e5ff; border-color: rgba(145,182,235,.28); background: rgba(16,36,78,.55); }
+.button-ghost:hover { background: #203b78; border-color: #65cfff; }
+.button-secondary { background: #173969; color: #8cdbff; }
+.button-secondary:hover { background: #24528f; }
+.text-link, .service-link { color: #63d5ff; }
+.form-card, .side-card, .contact-card, .tracker-search, .tracker-result, .cart-drawer, .order-list, .product-card { background: #101f46 !important; border-color: rgba(145,182,235,.2) !important; color: #edf3ff; box-shadow: 0 16px 36px rgba(1,7,23,.2); }
+.form-card-header p, .form-note, .side-card p, .contact-card p, .tracker-result p, .product-card p { color: #aebcda; }
+.field label, .field small { color: #b9c7e2; }
+.field input, .field select, .field textarea { background: #0b1839 !important; color: #edf3ff !important; border-color: rgba(145,182,235,.28) !important; }
+.field input::placeholder, .field textarea::placeholder { color: #7185ad; }
+.field input:focus, .field select:focus, .field textarea:focus { background: #102350 !important; border-color: #45caff !important; box-shadow: 0 0 0 4px rgba(53,196,255,.13); }
+.form-error { color: #ffb1a4; background: rgba(186,62,67,.2); }
+.success-card { background: rgba(18,122,103,.22); border-color: rgba(74,224,187,.25); color: #e4fff8; }
+.tracker-badge { background: #183a72; color: #79d7ff; }
+.step-dot { background: #132754; border-color: #38578e; color: #8296bd; }
+.category-tab { background: #13254d; border-color: rgba(145,182,235,.24); color: #b4c4e0; }
+.category-tab.active, .category-tab:hover { background: #246bff; color: #eff7ff; border-color: #4bbfff; }
+.product-visual { border-bottom: 1px solid rgba(145,182,235,.14); }
+.cart-drawer-header, .cart-drawer-footer { border-color: rgba(145,182,235,.2) !important; }
+.quantity-control button { background: #162a56; color: #dbe8ff; border-color: rgba(145,182,235,.28); }
+.site-footer { background: #050b20; color: #dce8ff; border-top: 1px solid rgba(145,182,235,.18); }
+.footer-copy, .footer-links a, .footer-meta { color: #93a9d0; }
+.footer-links a:hover { color: #63d5ff; }
+@media (max-width: 700px) {
+  .site-header { background: rgba(7,15,39,.97); }
+  .service-console-item { background: #12234b; }
+  .form-card, .side-card, .contact-card, .tracker-search, .tracker-result, .product-card { box-shadow: 0 11px 25px rgba(1,7,23,.18); }
+}
