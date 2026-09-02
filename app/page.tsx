@@ -8,12 +8,12 @@ const whatsappHref = site.whatsappNumber ? `https://wa.me/${normalizeKenyanNumbe
 export default function HomePage() {
   return (
     <>
-      <section className="hero">
+      <section className="hero hero-premium">
         <div className="container hero-grid">
           <div className="hero-copy">
-            <div className="eyebrow">Siaya’s device care desk</div>
+            <div className="eyebrow">Digital Electronics · Siaya</div>
             <h1>Local service.<br /><span>Properly done.</span></h1>
-            <p>{site.tagline} From a cracked screen to a slow laptop, we make the next step clear.</p>
+            <p>{site.tagline} One service desk for repairs, replacement parts and dependable device support.</p>
             <div className="hero-actions">
               <Link href="/book" className="button button-primary">Book a repair <ArrowRight size={16} /></Link>
               <Link href="/shop" className="button button-ghost">Browse spares</Link>
