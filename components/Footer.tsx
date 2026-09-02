@@ -15,7 +15,7 @@ export function Footer() {
               <span className="brand-mark">DE</span>
               <span>Digital Electronics</span>
             </Link>
-            <p>{site.tagline} Local service, clear updates and practical parts support from our Siaya counter.</p>
+            <p>Phone repair, laptop support and replacement parts from our service counter in Siaya.</p>
             <a className="button button-secondary button-small" href={whatsappHref}>
               <MessageCircle size={14} /> Chat on WhatsApp
             </a>
@@ -40,7 +40,7 @@ export function Footer() {
         </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Digital Electronics. Built for Siaya.</span>
-          <span>Clear service. Trusted hands. Better device days.</span>
+          <span>Practical device support for Siaya.</span>
         </div>
       </div>
     </footer>
