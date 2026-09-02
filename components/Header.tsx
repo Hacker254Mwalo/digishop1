@@ -8,7 +8,8 @@ export function Header() {
     <header className="site-header">
       <div className="container header-inner">
         <Link href="/" className="brand" aria-label="Digital Electronics home">
-          <span className="brand-logo-wrap"><img className="brand-logo" src="/images/digital-electronics-exterior-sign.jpg" alt="Digital Electronics" /></span>
+          <span className="brand-mark" aria-hidden="true">DE</span>
+          <span className="brand-copy"><strong>Digital</strong><span>Electronics</span></span>
         </Link>
         <nav className="nav" aria-label="Main navigation">
           <Link className="nav-link" href="/">Home</Link>
@@ -22,7 +23,7 @@ export function Header() {
             <PhoneCall size={15} /> <span>{site.phoneDisplay}</span>
           </a>
           <Link className="button button-primary" href="/book">
-            Book a repair <ArrowUpRight size={15} />
+            Start a repair <ArrowUpRight size={15} />
           </Link>
         </div>
       </div>
