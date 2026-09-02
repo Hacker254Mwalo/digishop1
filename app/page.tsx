@@ -33,17 +33,17 @@ export default function HomePage() {
         <div className="container hero-grid">
           <div className="hero-copy">
             <div className="eyebrow eyebrow-light"><span className="eyebrow-rule" /> Digital Phone Hub Repair & Electronics / Siaya, Kenya</div>
-            <h1>Technology should <span>keep moving.</span></h1>
-            <p className="hero-lead">Phone repair, laptop support and spare parts for the devices people rely on every day.</p>
-            <p className="hero-detail">Bring a cracked screen or a laptop that will not charge to our Siaya desk—or order the right spare part from anywhere in Kenya.</p>
+            <h1>Your phone, <span>back in motion.</span></h1>
+            <p className="hero-lead">Premium phone repair, laptop support and essential spare parts—built around the way people live and work.</p>
+            <p className="hero-detail">Bring the problem to our Siaya service desk, or find the right part from anywhere in Kenya. We make the next step clear before work begins.</p>
             <div className="hero-actions">
               <Link href="/book" className="button button-primary">Start a repair <ArrowRight size={16} /></Link>
               <Link href="/shop" className="button button-hero-ghost">Explore spares <ArrowUpRight size={15} /></Link>
             </div>
             <div className="hero-proof-strip" aria-label="Digital Phone Hub Repair & Electronics service principles">
-              <div><strong>01</strong><span>Diagnose first</span></div>
-              <div><strong>02</strong><span>Keep it visible</span></div>
-              <div><strong>03</strong><span>Return it ready</span></div>
+              <div><strong>01</strong><span>Understand it</span></div>
+              <div><strong>02</strong><span>Fix it right</span></div>
+              <div><strong>03</strong><span>Keep moving</span></div>
             </div>
             <div className="hero-contact" aria-label="Contact Digital Phone Hub Repair & Electronics">
               <a href={callHref}><PhoneCall size={14} /> {site.phoneDisplay}</a>
