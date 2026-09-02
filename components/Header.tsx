@@ -18,8 +18,8 @@ export function Header() {
           <Link className="nav-link" href="/contact">Visit us</Link>
         </nav>
         <div className="header-actions">
-          <a className="button button-secondary" href={callHref}>
-            <PhoneCall size={15} /> Call shop
+          <a className="header-phone" href={callHref} aria-label={`Call Digital Electronics on ${site.phoneDisplay}`}>
+            <PhoneCall size={15} /> <span>{site.phoneDisplay}</span>
           </a>
           <Link className="button button-primary" href="/book">
             Book a repair <ArrowUpRight size={15} />

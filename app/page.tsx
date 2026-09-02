@@ -23,6 +23,11 @@ export default function HomePage() {
               <span className="trust-point"><span className="trust-dot" /> Parts support</span>
               <span className="trust-point"><span className="trust-dot" /> Siaya-based</span>
             </div>
+            <div className="hero-contact" aria-label="Contact Digital Electronics">
+              <a href={callHref}><PhoneCall size={14} /> {site.phoneDisplay}</a>
+              <span className="hero-contact-divider">·</span>
+              <a href={whatsappHref}><MessageCircle size={14} /> WhatsApp</a>
+            </div>
           </div>
           <div className="hero-visual">
             <div className="hero-float hero-float-top">
