@@ -733,3 +733,19 @@ p { color: #aebcda; }
   .section-heading::after, .catalog-intro::after { margin-top: 14px; }
   .hero-photo-wrap::after { font-size: .49rem; }
 }
+
+/* Final route consistency overrides: remove remaining white-dependent blocks while preserving light text for clarity. */
+.service-console { background: linear-gradient(135deg, #0e1c42 0%, #101f4c 62%, #211c4f 100%) !important; border-bottom-color: rgba(145,182,235,.18) !important; }
+.service-console-item { background: rgba(15,31,71,.86) !important; }
+.service-console-item:hover { background: #1c3972 !important; box-shadow: 0 14px 30px rgba(1,7,23,.24) !important; }
+.service-card, .split-section, .service-standard-panel, .process-panel, .faq-section, .page-hero, .form-card, .side-card, .tracker-search, .tracker-result, .product-card, .cart-drawer, .contact-card { background-color: transparent !important; }
+.split-section { background: #0d1a3d !important; }
+.service-standard-panel, .process-panel { background: linear-gradient(145deg, #142650, #1b2451) !important; }
+.faq-section { background: #0b1738 !important; }
+.page-hero { background: radial-gradient(circle at 90% 5%, rgba(50,173,255,.14), transparent 28%), linear-gradient(130deg, #0b1636 0%, #122652 62%, #1b2050 100%) !important; }
+.form-card, .side-card, .tracker-search, .tracker-result, .product-card, .contact-card { background: #101f46 !important; }
+.cart-drawer { background: #0c193b !important; }
+.field input, .field select, .field textarea, .tracker-search input { background: #0b1839 !important; color: #edf3ff !important; }
+.category-tab { background: #13254d !important; color: #b4c4e0 !important; }
+.quantity-control button { background: #162a56 !important; color: #dbe8ff !important; }
+.cta-actions .button-secondary { background: #173969 !important; color: #8cdbff !important; }
