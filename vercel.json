@@ -6,7 +6,7 @@
   "outputDirectory": "dist/public",
   "functions": {
     "api/[...path].ts": {
-      "runtime": "nodejs24.x"
+      "runtime": "nodejs20.x"
     }
   }
 }
