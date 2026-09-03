@@ -11,6 +11,8 @@ const dbMocks = vi.hoisted(() => ({
   listProducts: vi.fn().mockResolvedValue([]),
   listRepairTickets: vi.fn().mockResolvedValue([]),
   listTechnicians: vi.fn().mockResolvedValue([]),
+  listAllTechnicians: vi.fn().mockResolvedValue([]),
+  upsertTechnician: vi.fn().mockResolvedValue({ success: true }),
   updateOrderStatus: vi.fn().mockResolvedValue({ success: true }),
   updateRepairTicket: vi.fn().mockResolvedValue({ success: true }),
   upsertProduct: vi.fn().mockResolvedValue({ success: true }),
@@ -98,5 +100,18 @@ describe("owner operations", () => {
     await caller.admin.updateOrder({ id: 12, status: "confirmed" });
     expect(dbMocks.upsertProduct).toHaveBeenCalled();
     expect(dbMocks.updateOrderStatus).toHaveBeenCalledWith({ id: 12, status: "confirmed" });
+  });
+
+  it("allows an owner to maintain the technician roster", async () => {
+    const caller = appRouter.createCaller(contextFor(owner));
+    await caller.admin.allTechnicians();
+    await caller.admin.upsertTechnician({ name: "Otieno Repair", specialty: "Phone diagnostics", active: true });
+    expect(dbMocks.listAllTechnicians).toHaveBeenCalled();
+    expect(dbMocks.upsertTechnician).toHaveBeenCalledWith({ name: "Otieno Repair", specialty: "Phone diagnostics", active: true });
+  });
+
+  it("rejects technician roster updates from non-admin users", async () => {
+    const caller = appRouter.createCaller(contextFor(baseUser));
+    await expect(caller.admin.upsertTechnician({ name: "Blocked User" })).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

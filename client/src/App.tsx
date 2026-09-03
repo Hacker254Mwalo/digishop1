@@ -8,6 +8,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import RepairBooking from "./pages/RepairBooking";
+import RepairStatus from "./pages/RepairStatus";
 import SpareParts from "./pages/SpareParts";
 
 function AdminRoute() {
@@ -19,6 +20,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/repair" component={RepairBooking} />
+      <Route path="/repair-status" component={RepairStatus} />
       <Route path="/spares" component={SpareParts} />
       <Route path="/admin" component={AdminRoute} />
       <Route path="/404" component={NotFound} />

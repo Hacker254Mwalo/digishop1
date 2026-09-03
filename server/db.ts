@@ -121,14 +121,15 @@ export async function createOrderRequest(input: {
 
 export async function getDashboardSummary() {
   const db = requireDb();
-  const [newRepairs, activeRepairs, readyRepairs, lowStock, pendingOrders] = await Promise.all([
+  const [newRepairs, activeRepairs, readyRepairs, lowStock, pendingOrders, activeTechnicians] = await Promise.all([
     db.select({ count: sql<number>`count(*)` }).from(repairTickets).where(eq(repairTickets.status, "received")),
     db.select({ count: sql<number>`count(*)` }).from(repairTickets).where(inArray(repairTickets.status, ["diagnostics", "awaiting_approval", "in_repair"])),
     db.select({ count: sql<number>`count(*)` }).from(repairTickets).where(eq(repairTickets.status, "ready")),
     db.select({ count: sql<number>`count(*)` }).from(products).where(and(eq(products.active, true), lte(products.stock, products.reorderLevel))),
     db.select({ count: sql<number>`count(*)` }).from(orderRequests).where(eq(orderRequests.status, "new")),
+    db.select({ count: sql<number>`count(*)` }).from(technicians).where(eq(technicians.active, true)),
   ]);
-  return { newRepairs: Number(newRepairs[0]?.count ?? 0), activeRepairs: Number(activeRepairs[0]?.count ?? 0), readyRepairs: Number(readyRepairs[0]?.count ?? 0), lowStock: Number(lowStock[0]?.count ?? 0), pendingOrders: Number(pendingOrders[0]?.count ?? 0) };
+  return { newRepairs: Number(newRepairs[0]?.count ?? 0), activeRepairs: Number(activeRepairs[0]?.count ?? 0), readyRepairs: Number(readyRepairs[0]?.count ?? 0), lowStock: Number(lowStock[0]?.count ?? 0), pendingOrders: Number(pendingOrders[0]?.count ?? 0), activeTechnicians: Number(activeTechnicians[0]?.count ?? 0) };
 }
 
 export async function listRepairTickets() {
@@ -160,6 +161,19 @@ export async function listOrderRequests() {
 export async function listTechnicians() {
   const db = requireDb();
   return db.select().from(technicians).where(eq(technicians.active, true)).orderBy(technicians.name);
+}
+
+export async function listAllTechnicians() {
+  const db = requireDb();
+  return db.select().from(technicians).orderBy(technicians.name);
+}
+
+export async function upsertTechnician(input: { id?: number; name: string; phone?: string; specialty?: string; active?: boolean }) {
+  const db = requireDb();
+  const values = { name: input.name, phone: input.phone || null, specialty: input.specialty || null, active: input.active ?? true } as const;
+  if (input.id) await db.update(technicians).set(values).where(eq(technicians.id, input.id));
+  else await db.insert(technicians).values(values);
+  return { success: true } as const;
 }
 
 export async function updateRepairTicket(input: { id: number; status?: "received" | "diagnostics" | "awaiting_approval" | "in_repair" | "ready" | "collected" | "cancelled"; technicianId?: number | null; quotedAmount?: number | null }) {

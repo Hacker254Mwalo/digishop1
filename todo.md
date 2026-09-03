@@ -20,3 +20,10 @@
 - [x] Load and display order items and order notes in the admin order workspace.
 - [x] Add missing repair-booking success and admin query/mutation error states.
 - [x] Expand Vitest coverage for successful repair/order creation and admin repair, product and order mutations.
+
+- [x] Rework the public experience toward a Carlcare-inspired repair-service structure while preserving Digital Phone Hub branding.
+- [x] Introduce a richer, coordinated color system and stronger service-category hierarchy across public pages.
+- [x] Improve public repair, spare-parts and repair-status journeys with clearer next actions.
+- [x] Expand owner/admin controls and summaries to support the upgraded service workflow.
+- [x] Validate Carlcare-inspired redesign across desktop/mobile, accessibility, keyboard focus, labels, contrast, tests and production build.
+- [x] Save the Carlcare-inspired upgrade checkpoint for owner review.

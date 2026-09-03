@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Boxes, ClipboardList, Home, LayoutDashboard, LogOut, PackageSearch, PanelLeft } from "lucide-react";
+import { Boxes, ClipboardList, Home, LayoutDashboard, LogOut, PackageSearch, PanelLeft, Smartphone, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -32,6 +32,7 @@ const menuItems = [
   { icon: ClipboardList, label: "Repair queue", path: "/admin?section=repairs" },
   { icon: Boxes, label: "Inventory", path: "/admin?section=inventory" },
   { icon: PackageSearch, label: "Spare-part orders", path: "/admin?section=orders" },
+  { icon: Users, label: "Technician team", path: "/admin?section=team" },
   { icon: Home, label: "Public website", path: "/" },
 ];
 
@@ -186,6 +187,7 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
+                  <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan-200 via-sky-400 to-blue-700 text-slate-950"><Smartphone className="h-4 w-4" /><span className="absolute bottom-1 right-1 h-1 w-1 rounded-full bg-violet-700" /></span>
                   <span className="font-semibold tracking-tight truncate">
                     DPH owner desk
                   </span>
