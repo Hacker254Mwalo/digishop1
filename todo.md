@@ -27,3 +27,8 @@
 - [x] Expand owner/admin controls and summaries to support the upgraded service workflow.
 - [x] Validate Carlcare-inspired redesign across desktop/mobile, accessibility, keyboard focus, labels, contrast, tests and production build.
 - [x] Save the Carlcare-inspired upgrade checkpoint for owner review.
+
+- [x] Diagnose why digishop1.vercel.app renders raw source files instead of the application.
+- [x] Verify Vercel project root, framework preset, build command, output directory and deployment branch.
+- [x] Correct any repository/deployment entrypoint mismatch without changing database data.
+- [x] Validate the corrected production artifact and provide the redeploy handoff.
