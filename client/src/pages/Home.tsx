@@ -1,33 +1,46 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+import { ArrowRight, BatteryCharging, CheckCircle2, Cpu, Laptop, MapPin, Package, Phone, ShieldCheck, Smartphone, Sparkles, Wrench, Zap } from "lucide-react";
+import { Link } from "wouter";
+import PublicShell from "@/components/PublicShell";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
+const services = [
+  { icon: Smartphone, eyebrow: "01 / Device care", title: "Phone repair", copy: "Screens, batteries, charging ports, software faults and the everyday problems that stop your phone working.", href: "/repair", accent: "from-cyan-300/25 to-blue-500/10", iconTone: "text-cyan-200" },
+  { icon: Laptop, eyebrow: "02 / Work ready", title: "Laptop service", copy: "Diagnostics, charging, keyboards, storage upgrades and practical support for work, study and home.", href: "/repair?device=laptop", accent: "from-violet-300/25 to-indigo-500/10", iconTone: "text-violet-200" },
+  { icon: Package, eyebrow: "03 / Parts desk", title: "Spare parts", copy: "Screens, batteries, charging parts and laptop spares. We confirm fit before delivery or collection anywhere in Kenya.", href: "/spares", accent: "from-orange-300/25 to-rose-500/10", iconTone: "text-orange-200" },
+];
+
 export default function Home() {
-  // The useAuth hook provides authentication state.
-  // To implement login/logout, call logout(), or start login from an event
-  // handler: onClick={() => startLogin()} (imported from "@/const"). Never call
-  // startLogin() during render (no href={startLogin()}) — it mints a one-time
-  // nonce cookie and must run only at the moment of navigation.
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
-
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
-
   return (
-    <div className="min-h-screen flex flex-col">
+    <PublicShell>
       <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
+        <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_85%_20%,rgba(34,211,238,.22),transparent_26%),radial-gradient(circle_at_12%_85%,rgba(124,58,237,.22),transparent_34%),linear-gradient(135deg,#0f172a_0%,#15264b_52%,#31245f_100%)]">
+          <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(255,255,255,.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.05)_1px,transparent_1px)] [background-size:42px_42px]" />
+          <div className="relative mx-auto grid max-w-7xl gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:py-28">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200"><span className="h-px w-8 bg-cyan-300" />Siaya, Kenya / service desk</div>
+              <h1 className="mt-7 max-w-3xl text-5xl font-semibold tracking-[-0.06em] text-white sm:text-7xl">Your device, <span className="bg-gradient-to-r from-cyan-200 via-sky-300 to-violet-300 bg-clip-text text-transparent">back in motion.</span></h1>
+              <p className="mt-7 max-w-xl text-base leading-7 text-slate-300 sm:text-lg">Digital Phone Hub Repair & Electronics brings a clear, human service flow to phone repair, laptop support and spare-parts requests.</p>
+              <div className="mt-9 flex flex-col gap-3 sm:flex-row"><Link href="/repair" className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-300 px-5 py-3.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-200">Start a repair <ArrowRight className="h-4 w-4" /></Link><Link href="/spares" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/5 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10">Find a spare part <Package className="h-4 w-4 text-orange-200" /></Link></div>
+              <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-xs text-slate-400"><span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4 text-cyan-200" />Repair desk in Siaya</span><span className="inline-flex items-center gap-2"><Zap className="h-4 w-4 text-orange-200" />Parts across Kenya</span><span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-200" />Clear before work begins</span></div>
+            </div>
+            <div className="relative mx-auto w-full max-w-lg">
+              <div className="absolute -inset-8 rounded-full bg-cyan-400/10 blur-3xl" />
+              <div className="relative rounded-[2rem] border border-white/15 bg-slate-950/40 p-4 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:p-6">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4"><span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Service control</span><span className="flex items-center gap-2 text-xs text-emerald-200"><span className="h-2 w-2 rounded-full bg-emerald-300" />Open for requests</span></div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2"><div className="rounded-2xl bg-gradient-to-br from-cyan-300/20 to-blue-500/10 p-4"><Smartphone className="h-5 w-5 text-cyan-200" /><p className="mt-8 text-xs text-slate-400">Phone repair</p><p className="mt-1 font-semibold text-white">The everyday essential</p></div><div className="rounded-2xl bg-gradient-to-br from-violet-300/20 to-indigo-500/10 p-4"><Cpu className="h-5 w-5 text-violet-200" /><p className="mt-8 text-xs text-slate-400">Diagnostics</p><p className="mt-1 font-semibold text-white">Find the right fault</p></div><div className="rounded-2xl bg-gradient-to-br from-orange-300/20 to-rose-500/10 p-4"><BatteryCharging className="h-5 w-5 text-orange-200" /><p className="mt-8 text-xs text-slate-400">Spare parts</p><p className="mt-1 font-semibold text-white">Fit before fulfilment</p></div><div className="rounded-2xl bg-gradient-to-br from-emerald-300/20 to-teal-500/10 p-4"><CheckCircle2 className="h-5 w-5 text-emerald-200" /><p className="mt-8 text-xs text-slate-400">Progress</p><p className="mt-1 font-semibold text-white">A clear next step</p></div></div>
+                <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4"><div className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-300/15 text-cyan-200"><Wrench className="h-5 w-5" /></div><div><p className="text-sm font-semibold text-white">One connected handover</p><p className="mt-1 text-xs text-slate-400">From first message to final collection.</p></div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-white/10 bg-slate-900"><div className="mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:grid-cols-3 sm:px-6"><div className="flex items-center gap-3"><span className="text-2xl font-semibold text-white">01</span><span className="text-sm text-slate-400">Describe the device and problem</span></div><div className="flex items-center gap-3"><span className="text-2xl font-semibold text-cyan-200">02</span><span className="text-sm text-slate-400">Get a clear service or parts path</span></div><div className="flex items-center gap-3"><span className="text-2xl font-semibold text-orange-200">03</span><span className="text-sm text-slate-400">Move forward with context</span></div></div></section>
+
+        <section className="bg-slate-950 px-4 py-20 sm:px-6 lg:py-28"><div className="mx-auto max-w-7xl"><div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">Choose the right route</p><h2 className="mt-4 max-w-xl text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">A better handover for every device.</h2></div><p className="max-w-xl text-sm leading-7 text-slate-400">Good service starts before the device reaches the counter. Choose the route that matches what you need, and we will collect the details that make the next conversation useful.</p></div><div className="mt-12 grid gap-4 lg:grid-cols-3">{services.map(service => <Link href={service.href} key={service.title} className={`group rounded-[1.75rem] border border-white/10 bg-gradient-to-br ${service.accent} p-6 transition hover:-translate-y-1 hover:border-white/25 hover:shadow-2xl hover:shadow-slate-950/40`}><div className="flex items-start justify-between"><span className={`grid h-12 w-12 place-items-center rounded-2xl bg-slate-950/40 ${service.iconTone}`}><service.icon className="h-6 w-6" /></span><ArrowRight className="h-5 w-5 text-slate-500 transition group-hover:translate-x-1 group-hover:text-white" /></div><p className="mt-14 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">{service.eyebrow}</p><h3 className="mt-2 text-2xl font-semibold text-white">{service.title}</h3><p className="mt-3 text-sm leading-6 text-slate-300">{service.copy}</p></Link>)}</div></div></section>
+
+        <section className="border-y border-white/10 bg-slate-900 px-4 py-20 sm:px-6 lg:py-24"><div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_.95fr] lg:items-center"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">Built for real shop work</p><h2 className="mt-4 max-w-2xl text-4xl font-semibold tracking-[-0.05em] text-white sm:text-5xl">The shop is physical. The handover is digital.</h2><p className="mt-6 max-w-xl text-sm leading-7 text-slate-400">Bring a device to the service desk in Siaya, or start with a spare-parts request from wherever you are in Kenya. The platform keeps the request, the decision and the next step together.</p><div className="mt-8 grid gap-4 sm:grid-cols-2"><div className="rounded-2xl border border-white/10 bg-white/5 p-5"><Phone className="h-5 w-5 text-cyan-200" /><h3 className="mt-5 font-semibold text-white">Speak to the service desk</h3><p className="mt-2 text-sm leading-6 text-slate-400">Call or start a repair request with the device details ready.</p></div><div className="rounded-2xl border border-white/10 bg-white/5 p-5"><Sparkles className="h-5 w-5 text-orange-200" /><h3 className="mt-5 font-semibold text-white">Confirm before fulfilment</h3><p className="mt-2 text-sm leading-6 text-slate-400">We verify fit, stock and delivery or collection before the order moves.</p></div></div></div><div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-blue-500/15 via-slate-950 to-violet-500/15 p-6"><div className="rounded-3xl border border-white/10 bg-slate-950/70 p-6"><div className="flex items-center justify-between"><span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Service thread</span><span className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs text-emerald-200">Ready</span></div><div className="mt-8 space-y-6"><div className="flex gap-4"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-cyan-300 text-xs font-bold text-slate-950">1</span><div><p className="font-semibold text-white">Describe what changed</p><p className="mt-1 text-sm text-slate-400">Model, fault, urgency and the best way to reach you.</p></div></div><div className="ml-4 h-7 w-px bg-gradient-to-b from-cyan-300 to-violet-300" /><div className="flex gap-4"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-violet-300 text-xs font-bold text-slate-950">2</span><div><p className="font-semibold text-white">Receive a reference</p><p className="mt-1 text-sm text-slate-400">The team can find the request and keep the next decision clear.</p></div></div><div className="ml-4 h-7 w-px bg-gradient-to-b from-violet-300 to-orange-300" /><div className="flex gap-4"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-orange-300 text-xs font-bold text-slate-950">3</span><div><p className="font-semibold text-white">Choose the next move</p><p className="mt-1 text-sm text-slate-400">Approve, collect, receive delivery or ask for a better option.</p></div></div></div></div></div></div></section>
+
+        <section className="bg-slate-950 px-4 py-16 sm:px-6"><div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 rounded-[2rem] border border-cyan-300/20 bg-gradient-to-r from-cyan-300/10 via-blue-500/10 to-violet-400/10 p-7 sm:flex-row sm:items-center sm:p-10"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">Start with the useful detail</p><h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">Tell us what needs attention.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">A clear first message helps the service desk guide the repair or confirm the right part.</p></div><div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row"><Link href="/repair" className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950">Start repair <ArrowRight className="h-4 w-4" /></Link><Link href="/spares" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white">Browse spares</Link></div></div></section>
       </main>
-    </div>
+    </PublicShell>
   );
 }
