@@ -6,10 +6,5 @@
   "outputDirectory": "dist/public",
   "rewrites": [
     { "source": "/manus-storage/:path*", "destination": "/api/manus-storage/:path*" }
-  ],
-  "functions": {
-    "api/[...path].ts": {
-      "runtime": "nodejs24.x"
-    }
-  }
+  ]
 }
