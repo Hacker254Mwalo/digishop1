@@ -32,3 +32,4 @@
 - [x] Verify Vercel project root, framework preset, build command, output directory and deployment branch.
 - [x] Correct any repository/deployment entrypoint mismatch without changing database data.
 - [x] Validate the corrected production artifact and provide the redeploy handoff.
+- [ ] Register the Express app at a Vercel-recognized root entrypoint and verify `/api/trpc/*` on the live domain.
