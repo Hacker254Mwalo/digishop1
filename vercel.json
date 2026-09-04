@@ -5,6 +5,7 @@
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist/public",
   "rewrites": [
-    { "source": "/manus-storage/:path*", "destination": "/api/manus-storage/:path*" }
+    { "source": "/manus-storage/:path*", "destination": "/api/manus-storage/:path*" },
+    { "source": "/((?!api|_next|assets|manus-storage|favicon.ico|.*\\..*).*)", "destination": "/index.html" }
   ]
 }
