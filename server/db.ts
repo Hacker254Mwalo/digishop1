@@ -1,203 +1,200 @@
-import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import {
-  customers,
-  devices,
-  InsertUser,
-  orderItems,
-  orderRequests,
-  products,
-  repairNotes,
-  repairTickets,
-  technicians,
-  users,
-} from "../drizzle/schema";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ENV } from "./_core/env";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+type CustomerInput = { name: string; phone: string; email?: string; location?: string };
+type DeviceInput = { type: "phone" | "laptop" | "tablet" | "other"; brand: string; model: string; serialNumber?: string; notes?: string };
+
+let _db: SupabaseClient | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+  if (!_db && ENV.supabaseUrl && ENV.supabaseSecretKey) {
+    _db = createClient(ENV.supabaseUrl, ENV.supabaseSecretKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
   }
   return _db;
 }
 
-function requireDb() {
-  if (!_db) throw new Error("Database is not available");
-  return _db;
-}
-
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) throw new Error("User openId is required for upsert");
+async function requireDb() {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-  const values: InsertUser = { openId: user.openId };
-  const updateSet: Record<string, unknown> = {};
-  const textFields = ["name", "email", "loginMethod"] as const;
-  for (const field of textFields) {
-    if (user[field] !== undefined) {
-      values[field] = user[field] ?? null;
-      updateSet[field] = user[field] ?? null;
-    }
-  }
-  if (user.lastSignedIn !== undefined) {
-    values.lastSignedIn = user.lastSignedIn;
-    updateSet.lastSignedIn = user.lastSignedIn;
-  }
-  if (user.role !== undefined) {
-    values.role = user.role;
-    updateSet.role = user.role;
-  } else if (user.openId === ENV.ownerOpenId) {
-    values.role = "admin";
-    updateSet.role = "admin";
-  }
-  values.lastSignedIn ??= new Date();
-  if (!Object.keys(updateSet).length) updateSet.lastSignedIn = new Date();
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  if (!db) throw new Error("Supabase database is not available");
+  return db;
+}
+
+function clean<T extends Record<string, unknown>>(input: T) {
+  return Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
+}
+
+async function one(request: PromiseLike<{ data: any; error: { message: string } | null }>): Promise<any> {
+  const { data, error } = await request;
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Supabase returned no data");
+  return data;
+}
+
+async function maybe(request: PromiseLike<{ data: any; error: { message: string } | null }>): Promise<any | null> {
+  const { data, error } = await request;
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
+
+async function many(request: PromiseLike<{ data: any[] | null; error: { message: string } | null }>): Promise<any[]> {
+  const { data, error } = await request;
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function upsertUser(user: { openId: string; name?: string | null; email?: string | null; loginMethod?: string | null; role?: "user" | "admin"; lastSignedIn?: Date }): Promise<void> {
+  if (!user.openId) throw new Error("User openId is required for upsert");
+  const db = await requireDb();
+  const payload = clean({ ...user, updatedAt: new Date(), lastSignedIn: user.lastSignedIn ?? new Date() });
+  if (user.openId === ENV.ownerOpenId) payload.role = "admin";
+  const { error } = await db.from("users").upsert(payload, { onConflict: "openId" });
+  if (error) throw new Error(error.message);
 }
 
 export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result[0];
+  const db = await requireDb();
+  return maybe(db.from("users").select("*").eq("openId", openId).limit(1).maybeSingle());
 }
 
-export async function findOrCreateCustomer(input: { name: string; phone: string; email?: string; location?: string }) {
-  const db = requireDb();
-  const existing = await db.select().from(customers).where(eq(customers.phone, input.phone)).limit(1);
-  if (existing[0]) {
-    await db.update(customers).set({ name: input.name, email: input.email ?? existing[0].email, location: input.location ?? existing[0].location }).where(eq(customers.id, existing[0].id));
-    return existing[0];
+export async function findOrCreateCustomer(input: CustomerInput) {
+  const db = await requireDb();
+  const existing = await maybe(db.from("customers").select("*").eq("phone", input.phone).limit(1).maybeSingle());
+  if (existing) {
+    return one(db.from("customers").update(clean({ name: input.name, email: input.email, location: input.location, updatedAt: new Date() })).eq("id", existing.id).select().single());
   }
-  const result = await db.insert(customers).values(input);
-  const created = await db.select().from(customers).where(eq(customers.id, result[0].insertId)).limit(1);
-  if (!created[0]) throw new Error("Customer could not be created");
-  return created[0];
+  return one(db.from("customers").insert(clean(input)).select().single());
 }
 
-export async function createRepairRequest(input: {
-  customer: { name: string; phone: string; email?: string; location?: string };
-  device: { type: "phone" | "laptop" | "tablet" | "other"; brand: string; model: string; serialNumber?: string; notes?: string };
-  issue: string;
-  priority?: "low" | "normal" | "high" | "urgent";
-}) {
-  const db = requireDb();
+export async function createRepairRequest(input: { customer: CustomerInput; device: DeviceInput; issue: string; priority?: "low" | "normal" | "high" | "urgent" }) {
+  const db = await requireDb();
   const customer = await findOrCreateCustomer(input.customer);
-  const deviceResult = await db.insert(devices).values({ customerId: customer.id, ...input.device });
-  const deviceRows = await db.select().from(devices).where(eq(devices.id, deviceResult[0].insertId)).limit(1);
-  if (!deviceRows[0]) throw new Error("Device could not be created");
+  const device = await one(db.from("devices").insert({ customerId: customer.id, ...clean(input.device) }).select().single());
   const reference = `DPH-REP-${Date.now().toString(36).toUpperCase()}`;
-  const ticketResult = await db.insert(repairTickets).values({ reference, customerId: customer.id, deviceId: deviceRows[0].id, issue: input.issue, priority: input.priority ?? "normal" });
-  return { reference, ticketId: ticketResult[0].insertId, customerId: customer.id, deviceId: deviceRows[0].id };
+  const ticket = await one(db.from("repairTickets").insert({ reference, customerId: customer.id, deviceId: device.id, issue: input.issue, priority: input.priority ?? "normal" }).select().single());
+  return { reference, ticketId: ticket.id, customerId: customer.id, deviceId: device.id };
 }
 
-export async function createOrderRequest(input: {
-  customer: { name: string; phone: string; email?: string; location?: string };
-  fulfillment: "delivery" | "collection";
-  deliveryLocation?: string;
-  notes?: string;
-  items: Array<{ productId?: number; productName: string; quantity: number; unitPrice: number }>;
-}) {
-  const db = requireDb();
+export async function createOrderRequest(input: { customer: CustomerInput; fulfillment: "delivery" | "collection"; deliveryLocation?: string; notes?: string; items: Array<{ productId?: number; productName: string; quantity: number; unitPrice: number }> }) {
+  const db = await requireDb();
   if (!input.items.length) throw new Error("At least one item is required");
   const customer = await findOrCreateCustomer(input.customer);
   const total = input.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   const reference = `DPH-ORD-${Date.now().toString(36).toUpperCase()}`;
-  const orderResult = await db.insert(orderRequests).values({ reference, customerId: customer.id, fulfillment: input.fulfillment, deliveryLocation: input.deliveryLocation, notes: input.notes, total });
-  const orderId = orderResult[0].insertId;
-  await db.insert(orderItems).values(input.items.map(item => ({ orderRequestId: orderId, productId: item.productId, productNameSnapshot: item.productName, quantity: item.quantity, unitPrice: item.unitPrice })));
-  return { reference, orderId, customerId: customer.id, total };
+  const order = await one(db.from("orderRequests").insert({ reference, customerId: customer.id, fulfillment: input.fulfillment, deliveryLocation: input.deliveryLocation, notes: input.notes, total }).select().single());
+  const items = input.items.map(item => clean({ orderRequestId: order.id, productId: item.productId, productNameSnapshot: item.productName, quantity: item.quantity, unitPrice: item.unitPrice }));
+  const { error } = await db.from("orderItems").insert(items);
+  if (error) throw new Error(error.message);
+  return { reference, orderId: order.id, customerId: customer.id, total };
+}
+
+async function countWhere(table: string, filters: Array<[string, string]>) {
+  const db = await requireDb();
+  let query = db.from(table).select("id", { count: "exact", head: true });
+  for (const [column, value] of filters) query = query.eq(column, value);
+  const { count, error } = await query;
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 export async function getDashboardSummary() {
-  const db = requireDb();
-  const [newRepairs, activeRepairs, readyRepairs, lowStock, pendingOrders, activeTechnicians] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(repairTickets).where(eq(repairTickets.status, "received")),
-    db.select({ count: sql<number>`count(*)` }).from(repairTickets).where(inArray(repairTickets.status, ["diagnostics", "awaiting_approval", "in_repair"])),
-    db.select({ count: sql<number>`count(*)` }).from(repairTickets).where(eq(repairTickets.status, "ready")),
-    db.select({ count: sql<number>`count(*)` }).from(products).where(and(eq(products.active, true), lte(products.stock, products.reorderLevel))),
-    db.select({ count: sql<number>`count(*)` }).from(orderRequests).where(eq(orderRequests.status, "new")),
-    db.select({ count: sql<number>`count(*)` }).from(technicians).where(eq(technicians.active, true)),
+  const db = await requireDb();
+  const [newRepairs, activeRows, readyRepairs, products, pendingOrders, activeTechnicians] = await Promise.all([
+    countWhere("repairTickets", [["status", "received"]]),
+    many(db.from("repairTickets").select("id,status").in("status", ["diagnostics", "awaiting_approval", "in_repair"])),
+    countWhere("repairTickets", [["status", "ready"]]),
+    many(db.from("products").select("stock,reorderLevel").eq("active", true)),
+    countWhere("orderRequests", [["status", "new"]]),
+    countWhere("technicians", [["active", "true"]]),
   ]);
-  return { newRepairs: Number(newRepairs[0]?.count ?? 0), activeRepairs: Number(activeRepairs[0]?.count ?? 0), readyRepairs: Number(readyRepairs[0]?.count ?? 0), lowStock: Number(lowStock[0]?.count ?? 0), pendingOrders: Number(pendingOrders[0]?.count ?? 0), activeTechnicians: Number(activeTechnicians[0]?.count ?? 0) };
+  return { newRepairs, activeRepairs: activeRows.length, readyRepairs, lowStock: products.filter(product => product.stock <= product.reorderLevel).length, pendingOrders, activeTechnicians };
 }
 
 export async function listRepairTickets() {
-  const db = requireDb();
-  return db.select({ ticket: repairTickets, customer: customers, device: devices, technician: technicians }).from(repairTickets).leftJoin(customers, eq(repairTickets.customerId, customers.id)).leftJoin(devices, eq(repairTickets.deviceId, devices.id)).leftJoin(technicians, eq(repairTickets.technicianId, technicians.id)).orderBy(desc(repairTickets.createdAt));
+  const db = await requireDb();
+  const tickets = await many(db.from("repairTickets").select("*").order("createdAt", { ascending: false }));
+  const [customers, devices, technicians] = await Promise.all([
+    many(db.from("customers").select("*")),
+    many(db.from("devices").select("*")),
+    many(db.from("technicians").select("*")),
+  ]);
+  return tickets.map(ticket => ({ ticket, customer: customers.find(customer => customer.id === ticket.customerId) ?? null, device: devices.find(device => device.id === ticket.deviceId) ?? null, technician: technicians.find(technician => technician.id === ticket.technicianId) ?? null }));
+}
+
+export async function getRepairStatus(reference: string) {
+  const db = await requireDb();
+  const ticket = await maybe(db.from("repairTickets").select("*").eq("reference", reference).limit(1).maybeSingle());
+  if (!ticket) return null;
+  const device = await maybe(db.from("devices").select("brand,model").eq("id", ticket.deviceId).limit(1).maybeSingle());
+  return { reference: ticket.reference, status: ticket.status, issue: ticket.issue, device: device ? `${device.brand} ${device.model}` : "Device", receivedAt: ticket.receivedAt };
 }
 
 export async function getRepairHistory(input: { customerId: number; deviceId: number }) {
-  const db = requireDb();
-  const tickets = await db.select({ ticket: repairTickets, technician: technicians }).from(repairTickets).leftJoin(technicians, eq(repairTickets.technicianId, technicians.id)).where(and(eq(repairTickets.customerId, input.customerId), eq(repairTickets.deviceId, input.deviceId))).orderBy(desc(repairTickets.createdAt));
-  const ids = tickets.map(row => row.ticket.id);
-  const notes = ids.length ? await db.select().from(repairNotes).where(inArray(repairNotes.ticketId, ids)).orderBy(desc(repairNotes.createdAt)) : [];
-  return { tickets, notes };
+  const db = await requireDb();
+  const tickets = await many(db.from("repairTickets").select("*").eq("customerId", input.customerId).eq("deviceId", input.deviceId).order("createdAt", { ascending: false }));
+  const technicians = await many(db.from("technicians").select("*"));
+  const ids = tickets.map(ticket => ticket.id);
+  const notes = ids.length ? await many(db.from("repairNotes").select("*").in("ticketId", ids).order("createdAt", { ascending: false })) : [];
+  return { tickets: tickets.map(ticket => ({ ticket, technician: technicians.find(technician => technician.id === ticket.technicianId) ?? null })), notes };
 }
 
 export async function listProducts() {
-  const db = requireDb();
-  return db.select().from(products).where(eq(products.active, true)).orderBy(desc(products.updatedAt));
+  const db = await requireDb();
+  return many(db.from("products").select("*").eq("active", true).order("updatedAt", { ascending: false }));
 }
 
 export async function listOrderRequests() {
-  const db = requireDb();
-  const rows = await db.select({ order: orderRequests, customer: customers }).from(orderRequests).leftJoin(customers, eq(orderRequests.customerId, customers.id)).orderBy(desc(orderRequests.createdAt));
-  const ids = rows.map(row => row.order.id);
-  const items = ids.length ? await db.select().from(orderItems).where(inArray(orderItems.orderRequestId, ids)) : [];
-  return rows.map(row => ({ ...row, items: items.filter(item => item.orderRequestId === row.order.id) }));
+  const db = await requireDb();
+  const orders = await many(db.from("orderRequests").select("*").order("createdAt", { ascending: false }));
+  const [customers, items] = await Promise.all([many(db.from("customers").select("*")), many(db.from("orderItems").select("*"))]);
+  return orders.map(order => ({ order, customer: customers.find(customer => customer.id === order.customerId) ?? null, items: items.filter(item => item.orderRequestId === order.id) }));
 }
 
 export async function listTechnicians() {
-  const db = requireDb();
-  return db.select().from(technicians).where(eq(technicians.active, true)).orderBy(technicians.name);
+  const db = await requireDb();
+  return many(db.from("technicians").select("*").eq("active", true).order("name"));
 }
 
 export async function listAllTechnicians() {
-  const db = requireDb();
-  return db.select().from(technicians).orderBy(technicians.name);
+  const db = await requireDb();
+  return many(db.from("technicians").select("*").order("name"));
 }
 
 export async function upsertTechnician(input: { id?: number; name: string; phone?: string; specialty?: string; active?: boolean }) {
-  const db = requireDb();
-  const values = { name: input.name, phone: input.phone || null, specialty: input.specialty || null, active: input.active ?? true } as const;
-  if (input.id) await db.update(technicians).set(values).where(eq(technicians.id, input.id));
-  else await db.insert(technicians).values(values);
+  const db = await requireDb();
+  const values = clean({ name: input.name, phone: input.phone || null, specialty: input.specialty || null, active: input.active ?? true, updatedAt: new Date() });
+  const { error } = input.id ? await db.from("technicians").update(values).eq("id", input.id) : await db.from("technicians").insert(values);
+  if (error) throw new Error(error.message);
   return { success: true } as const;
 }
 
 export async function updateRepairTicket(input: { id: number; status?: "received" | "diagnostics" | "awaiting_approval" | "in_repair" | "ready" | "collected" | "cancelled"; technicianId?: number | null; quotedAmount?: number | null }) {
-  const db = requireDb();
-  await db.update(repairTickets).set({ status: input.status, technicianId: input.technicianId, quotedAmount: input.quotedAmount, completedAt: input.status === "ready" || input.status === "collected" ? new Date() : undefined }).where(eq(repairTickets.id, input.id));
+  const db = await requireDb();
+  const values = clean({ status: input.status, technicianId: input.technicianId, quotedAmount: input.quotedAmount, completedAt: input.status === "ready" || input.status === "collected" ? new Date() : undefined, updatedAt: new Date() });
+  const { error } = await db.from("repairTickets").update(values).eq("id", input.id);
+  if (error) throw new Error(error.message);
   return { success: true } as const;
 }
 
 export async function addRepairNote(input: { ticketId: number; authorId: number; note: string }) {
-  const db = requireDb();
-  await db.insert(repairNotes).values(input);
+  const db = await requireDb();
+  const { error } = await db.from("repairNotes").insert(input);
+  if (error) throw new Error(error.message);
   return { success: true } as const;
 }
 
 export async function upsertProduct(input: { id?: number; sku: string; name: string; category: "phone_screen" | "charging_port" | "battery" | "laptop_spare" | "accessory" | "other"; description?: string; compatibility?: string; price: number; stock: number; reorderLevel?: number; availability?: "in_stock" | "low_stock" | "out_of_stock" | "by_order" }) {
-  const db = requireDb();
-  const values = { sku: input.sku, name: input.name, category: input.category, description: input.description, compatibility: input.compatibility, price: input.price, stock: input.stock, reorderLevel: input.reorderLevel ?? 2, availability: input.availability ?? (input.stock > 2 ? "in_stock" : input.stock > 0 ? "low_stock" : "out_of_stock") } as const;
-  if (input.id) await db.update(products).set(values).where(eq(products.id, input.id));
-  else await db.insert(products).values(values);
+  const db = await requireDb();
+  const values = clean({ sku: input.sku, name: input.name, category: input.category, description: input.description, compatibility: input.compatibility, price: input.price, stock: input.stock, reorderLevel: input.reorderLevel ?? 2, availability: input.availability ?? (input.stock > 2 ? "in_stock" : input.stock > 0 ? "low_stock" : "out_of_stock"), updatedAt: new Date() });
+  const { error } = input.id ? await db.from("products").update(values).eq("id", input.id) : await db.from("products").insert(values);
+  if (error) throw new Error(error.message);
   return { success: true } as const;
 }
 
 export async function updateOrderStatus(input: { id: number; status: "new" | "confirmed" | "fulfilled" | "cancelled" }) {
-  const db = requireDb();
-  await db.update(orderRequests).set({ status: input.status }).where(eq(orderRequests.id, input.id));
+  const db = await requireDb();
+  const { error } = await db.from("orderRequests").update({ status: input.status, updatedAt: new Date() }).eq("id", input.id);
+  if (error) throw new Error(error.message);
   return { success: true } as const;
 }

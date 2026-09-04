@@ -9,6 +9,7 @@ import {
   createRepairRequest,
   getDashboardSummary,
   getRepairHistory,
+  getRepairStatus,
   listOrderRequests,
   listProducts,
   listRepairTickets,
@@ -19,9 +20,6 @@ import {
   updateRepairTicket,
   upsertProduct,
 } from "./db";
-import { getDb } from "./db";
-import { repairTickets, customers, devices } from "../drizzle/schema";
-import { and, eq } from "drizzle-orm";
 
 const customerInput = z.object({
   name: z.string().trim().min(2).max(160),
@@ -51,13 +49,7 @@ export const appRouter = router({
   public: router({
     createRepairRequest: publicProcedure.input(z.object({ customer: customerInput, device: deviceInput, issue: z.string().trim().min(5).max(4000), priority: z.enum(["low", "normal", "high", "urgent"]).optional() })).mutation(({ input }) => createRepairRequest(input)),
     createOrderRequest: publicProcedure.input(z.object({ customer: customerInput, fulfillment: z.enum(["delivery", "collection"]), deliveryLocation: z.string().trim().max(180).optional(), notes: z.string().trim().max(2000).optional(), items: z.array(z.object({ productId: z.number().int().positive().optional(), productName: z.string().trim().min(1).max(180), quantity: z.number().int().positive().max(20), unitPrice: z.number().int().nonnegative() })).min(1).max(40) })).mutation(({ input }) => createOrderRequest(input)),
-    getRepairStatus: publicProcedure.input(z.object({ reference: z.string().trim().min(6).max(32) })).query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database is not available");
-      const rows = await db.select({ ticket: repairTickets, customer: customers, device: devices }).from(repairTickets).leftJoin(customers, eq(repairTickets.customerId, customers.id)).leftJoin(devices, eq(repairTickets.deviceId, devices.id)).where(and(eq(repairTickets.reference, input.reference))).limit(1);
-      const row = rows[0];
-      return row ? { reference: row.ticket.reference, status: row.ticket.status, issue: row.ticket.issue, device: row.device ? `${row.device.brand} ${row.device.model}` : "Device", receivedAt: row.ticket.receivedAt } : null;
-    }),
+    getRepairStatus: publicProcedure.input(z.object({ reference: z.string().trim().min(6).max(32) })).query(({ input }) => getRepairStatus(input.reference)),
   }),
   admin: router({
     summary: adminProcedure.query(() => getDashboardSummary()),
