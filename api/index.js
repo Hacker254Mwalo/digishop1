@@ -1,4 +1,4 @@
-import createApp from "../server/_core/api";
+import createApp from "../server/_core/api.ts";
 
 let appPromise;
 
