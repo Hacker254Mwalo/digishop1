@@ -13,10 +13,7 @@ const navItems = [
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <span className="flex items-center gap-3">
-      <span aria-hidden="true" className={`${compact ? "h-9 w-9 rounded-xl" : "h-10 w-10 rounded-2xl"} relative grid place-items-center bg-gradient-to-br from-cyan-200 via-sky-400 to-blue-700 text-slate-950 shadow-lg shadow-cyan-400/20`}>
-        <Smartphone className={compact ? "h-4 w-4" : "h-5 w-5"} />
-        <span className={`${compact ? "bottom-1.5 right-1.5 h-1 w-1" : "bottom-1.5 right-1.5 h-1.5 w-1.5"} absolute rounded-full bg-violet-700`} />
-      </span>
+      <img src="/brand/icon.svg" alt="" aria-hidden="true" className={`${compact ? "h-9 w-9 rounded-xl" : "h-10 w-10 rounded-2xl"} shrink-0 shadow-lg shadow-cyan-400/20`} />
       <span className="leading-tight">
         <strong className={`${compact ? "text-sm" : "text-sm"} block font-semibold tracking-tight`}>Digital Phone Hub</strong>
         <span className="block text-[10px] font-medium uppercase tracking-[0.18em] text-cyan-200">Repair & Electronics</span>
