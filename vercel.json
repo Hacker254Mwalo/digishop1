@@ -4,9 +4,6 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist/public",
-  "functions": {
-    "api/[...path].js": { "runtime": "nodejs22.x" }
-  },
   "rewrites": [
     { "source": "/manus-storage/:path*", "destination": "/api/manus-storage/:path*" },
     { "source": "/((?!api|_next|assets|manus-storage|favicon.ico|.*\\..*).*)", "destination": "/index.html" }
