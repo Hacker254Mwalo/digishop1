@@ -30,7 +30,7 @@ const customerInput = z.object({
 });
 
 const deviceInput = z.object({
-  type: z.enum(["phone", "laptop", "tablet", "other"]),
+  type: z.enum(["phone", "laptop", "tablet", "electronics", "other"]),
   brand: z.string().trim().min(1).max(100),
   model: z.string().trim().min(1).max(160),
   serialNumber: z.string().trim().max(160).optional(),

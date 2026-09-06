@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ENV } from "./_core/env";
 
 type CustomerInput = { name: string; phone: string; email?: string; location?: string };
-type DeviceInput = { type: "phone" | "laptop" | "tablet" | "other"; brand: string; model: string; serialNumber?: string; notes?: string };
+type DeviceInput = { type: "phone" | "laptop" | "tablet" | "electronics" | "other"; brand: string; model: string; serialNumber?: string; notes?: string };
 
 let _db: SupabaseClient | null = null;
 
