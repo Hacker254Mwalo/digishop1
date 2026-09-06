@@ -7,7 +7,6 @@ const navItems = [
   { href: "/repair", label: "Book a repair" },
   { href: "/repair-status", label: "Repair status" },
   { href: "/spares", label: "Spare parts" },
-  { href: "/admin", label: "Owner portal" },
 ];
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
@@ -50,7 +49,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
       <footer className="border-t border-white/10 bg-slate-950">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 lg:grid-cols-[1.5fr_1fr_1fr]">
           <div><Link href="/" className="inline-flex rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"><BrandMark compact /></Link><p className="mt-4 max-w-sm text-sm leading-6 text-slate-400">A real service desk in Siaya for phones and laptops, with spare parts and accessories available for customers across Kenya.</p></div>
-          <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">Customer routes</p><div className="mt-4 grid gap-3 text-sm text-slate-400"><Link href="/repair">Book a repair</Link><Link href="/repair-status">Check repair status</Link><Link href="/spares">Request spare parts</Link><Link href="/admin">Owner portal</Link></div></div>
+          <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">Customer routes</p><div className="mt-4 grid gap-3 text-sm text-slate-400"><Link href="/repair">Book a repair</Link><Link href="/repair-status">Check repair status</Link><Link href="/spares">Request spare parts</Link></div></div>
           <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">Service desk</p><div className="mt-4 grid gap-3 text-sm text-slate-400"><span>Siaya Town, Siaya County</span><a href="tel:+254718114009">0718 114 009</a><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-300" />Clear next steps, real people.</span></div></div>
         </div>
         <div className="border-t border-white/10 px-4 py-5 text-center text-xs text-slate-500">© {new Date().getFullYear()} Digital Phone Hub Repair & Electronics</div>

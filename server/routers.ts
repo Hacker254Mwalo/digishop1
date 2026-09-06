@@ -3,6 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, publicProcedure, router } from "./_core/trpc";
+import { clearOwnerSession, setOwnerSession, signInOwner } from "./_core/ownerAuth";
 import {
   addRepairNote,
   createOrderRequest,
@@ -40,9 +41,15 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    ownerLogin: publicProcedure.input(z.object({ email: z.string().email(), password: z.string().min(8).max(200) })).mutation(async ({ ctx, input }) => {
+      const { user, accessToken } = await signInOwner(input.email, input.password);
+      setOwnerSession(ctx.res, accessToken);
+      return { id: user.id, email: user.email };
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      if ((ctx.req.headers.cookie ?? "").includes("dph-owner-session=")) clearOwnerSession(ctx.res);
       return { success: true } as const;
     }),
   }),
