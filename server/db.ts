@@ -80,10 +80,17 @@ export async function createOrderRequest(input: { customer: CustomerInput; fulfi
   const db = await requireDb();
   if (!input.items.length) throw new Error("At least one item is required");
   const customer = await findOrCreateCustomer(input.customer);
-  const total = input.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const productIds = input.items.map(item => item.productId).filter((id): id is number => typeof id === "number");
+  const catalogProducts = productIds.length ? await many(db.from("products").select("id,name,price,availability,active").in("id", productIds)) : [];
+  const resolvedItems = input.items.map(item => {
+    const catalogProduct = item.productId ? catalogProducts.find(product => product.id === item.productId) : null;
+    if (item.productId && (!catalogProduct || !catalogProduct.active || catalogProduct.availability === "out_of_stock")) throw new Error(`Product ${item.productName} is no longer available`);
+    return { ...item, productName: catalogProduct?.name ?? item.productName, unitPrice: catalogProduct?.price ?? 0 };
+  });
+  const total = resolvedItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   const reference = `DPH-ORD-${Date.now().toString(36).toUpperCase()}`;
   const order = await one(db.from("orderRequests").insert({ reference, customerId: customer.id, fulfillment: input.fulfillment, deliveryLocation: input.deliveryLocation, notes: input.notes, total }).select().single());
-  const items = input.items.map(item => clean({ orderRequestId: order.id, productId: item.productId, productNameSnapshot: item.productName, quantity: item.quantity, unitPrice: item.unitPrice }));
+  const items = resolvedItems.map(item => clean({ orderRequestId: order.id, productId: item.productId, productNameSnapshot: item.productName, quantity: item.quantity, unitPrice: item.unitPrice }));
   const { error } = await db.from("orderItems").insert(items);
   if (error) throw new Error(error.message);
   return { reference, orderId: order.id, customerId: customer.id, total };

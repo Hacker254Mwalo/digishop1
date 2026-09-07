@@ -54,6 +54,7 @@ export const appRouter = router({
     }),
   }),
   public: router({
+    products: publicProcedure.query(() => listProducts()),
     createRepairRequest: publicProcedure.input(z.object({ customer: customerInput, device: deviceInput, issue: z.string().trim().min(5).max(4000), priority: z.enum(["low", "normal", "high", "urgent"]).optional() })).mutation(({ input }) => createRepairRequest(input)),
     createOrderRequest: publicProcedure.input(z.object({ customer: customerInput, fulfillment: z.enum(["delivery", "collection"]), deliveryLocation: z.string().trim().max(180).optional(), notes: z.string().trim().max(2000).optional(), items: z.array(z.object({ productId: z.number().int().positive().optional(), productName: z.string().trim().min(1).max(180), quantity: z.number().int().positive().max(20), unitPrice: z.number().int().nonnegative() })).min(1).max(40) })).mutation(({ input }) => createOrderRequest(input)),
     getRepairStatus: publicProcedure.input(z.object({ reference: z.string().trim().min(6).max(32) })).query(({ input }) => getRepairStatus(input.reference)),
