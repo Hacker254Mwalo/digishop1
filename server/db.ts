@@ -199,6 +199,13 @@ export async function upsertProduct(input: { id?: number; sku: string; name: str
   return { success: true } as const;
 }
 
+export async function removeProduct(input: { id: number }) {
+  const db = await requireDb();
+  const { error } = await db.from("products").update({ active: false, availability: "out_of_stock", updatedAt: new Date() }).eq("id", input.id);
+  if (error) throw new Error(error.message);
+  return { success: true } as const;
+}
+
 export async function updateOrderStatus(input: { id: number; status: "new" | "confirmed" | "fulfilled" | "cancelled" }) {
   const db = await requireDb();
   const { error } = await db.from("orderRequests").update({ status: input.status, updatedAt: new Date() }).eq("id", input.id);
