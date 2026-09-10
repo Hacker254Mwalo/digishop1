@@ -173,10 +173,10 @@ function DashboardLayoutContent({
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r border-white/10 bg-[#071426] text-slate-100"
+          className="border-r border-white/10 bg-[#071426]/95 text-slate-100 shadow-2xl shadow-black/20"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-16 justify-center">
+          <SidebarHeader className="h-20 justify-center border-b border-white/[0.06]">
             <div className="flex items-center gap-3 px-2 transition-all w-full">
               <button
                 onClick={toggleSidebar}
@@ -188,8 +188,9 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-cyan-200 via-sky-400 to-blue-700 text-slate-950"><Smartphone className="h-4 w-4" /><span className="absolute bottom-1 right-1 h-1 w-1 rounded-full bg-violet-700" /></span>
-                  <span className="font-semibold tracking-tight truncate">
-                    DPH owner desk
+                  <span className="min-w-0 truncate">
+                    <span className="block truncate font-semibold tracking-tight">DPH owner desk</span>
+                    <span className="mt-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200/70"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,.8)]" />Live workspace</span>
                   </span>
                 </div>
               ) : null}
@@ -206,7 +207,7 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => navigateMenu(item.path)}
                       tooltip={item.label}
-                      className={`h-10 font-normal transition-all data-[active=true]:bg-cyan-300 data-[active=true]:text-slate-950 data-[active=true]:shadow-lg data-[active=true]:shadow-cyan-300/10`}
+                      className={`h-11 rounded-xl font-medium transition-all data-[active=true]:bg-cyan-300 data-[active=true]:text-slate-950 data-[active=true]:shadow-lg data-[active=true]:shadow-cyan-300/10`}
                     >
                       <item.icon
                         className={`h-4 w-4 ${isActive ? "text-slate-950" : "text-slate-400"}`}
@@ -222,7 +223,7 @@ function DashboardLayoutContent({
           <SidebarFooter className="p-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <button className="flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-2 py-2 text-left transition-colors hover:border-cyan-200/20 hover:bg-white/[0.06] group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <Avatar className="h-9 w-9 border shrink-0">
                     <AvatarFallback className="text-xs font-medium">
                       {user?.name?.charAt(0).toUpperCase()}
@@ -261,22 +262,23 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset className="min-h-screen bg-[#050b18] text-slate-100">
+      <SidebarInset className="admin-canvas min-h-screen text-slate-100">
         {isMobile && (
-          <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/10 bg-[#071426]/95 px-2 text-slate-100 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
+          <div className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/10 bg-[#071426]/90 px-3 text-slate-100 shadow-lg shadow-black/10 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-white/10 text-slate-200 hover:bg-white/15" />
               <div className="flex items-center gap-3">
                 <div className="flex flex-col gap-1">
-                  <span className="font-medium tracking-tight text-white">
-                    {activeMenuItem?.label ?? "Owner desk"}
+                  <span>
+                    <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200/70">Live workspace</span>
+                    <span className="mt-0.5 block font-semibold tracking-tight text-white">{activeMenuItem?.label ?? "Owner desk"}</span>
                   </span>
                 </div>
               </div>
             </div>
           </div>
         )}
-        <main className="min-h-screen flex-1 bg-[#050b18] p-4">{children}</main>
+        <main className="min-h-screen flex-1 px-3 py-5 sm:px-5 lg:px-8 lg:py-8">{children}</main>
       </SidebarInset>
     </>
   );

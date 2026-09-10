@@ -117,7 +117,8 @@
   body {
     @apply bg-background text-foreground;
     font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-    background-image: radial-gradient(circle at 50% -20%, rgba(34,211,238,.08), transparent 34rem);
+    background-color: #090b10;
+    background-image: radial-gradient(circle at 50% -20%, rgba(34,211,238,.1), transparent 34rem), radial-gradient(circle at 95% 35%, rgba(124,58,237,.06), transparent 28rem);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -166,9 +167,31 @@
 
   .premium-panel {
     border: 1px solid rgba(255,255,255,.1);
-    background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
+    background: linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
     box-shadow: 0 24px 70px rgba(0,0,0,.22);
     backdrop-filter: blur(18px);
+  }
+
+  .premium-panel-hover {
+    transition: transform 220ms cubic-bezier(.23,1,.32,1), border-color 220ms ease, box-shadow 220ms ease;
+  }
+
+  .premium-panel-hover:hover {
+    border-color: rgba(103,232,249,.24);
+    box-shadow: 0 28px 80px rgba(0,0,0,.3), 0 0 0 1px rgba(103,232,249,.04);
+    transform: translateY(-2px);
+  }
+
+  .admin-canvas {
+    background-image: radial-gradient(circle at 12% 0%, rgba(34,211,238,.09), transparent 28rem), radial-gradient(circle at 100% 12%, rgba(99,102,241,.08), transparent 24rem);
+  }
+
+  .focus-ring {
+    outline: none;
+  }
+
+  .focus-ring:focus-visible {
+    box-shadow: 0 0 0 3px rgba(103,232,249,.16), 0 0 0 1px rgba(103,232,249,.75);
   }
 
   .premium-input {
