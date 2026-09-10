@@ -84,6 +84,7 @@ export const products = mysqlTable("products", {
   category: mysqlEnum("category", ["phone_screen", "charging_port", "battery", "laptop_spare", "accessory", "other"]).notNull(),
   description: text("description"),
   compatibility: text("compatibility"),
+  imageUrl: varchar("imageUrl", { length: 512 }),
   price: int("price").notNull(),
   stock: int("stock").default(0).notNull(),
   reorderLevel: int("reorderLevel").default(2).notNull(),

@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ENV } from "./_core/env";
+import { storagePut } from "./storage";
 
 type CustomerInput = { name: string; phone: string; email?: string; location?: string };
 type DeviceInput = { type: "phone" | "laptop" | "tablet" | "electronics" | "other"; brand: string; model: string; serialNumber?: string; notes?: string };
@@ -191,12 +192,29 @@ export async function addRepairNote(input: { ticketId: number; authorId: number;
   return { success: true } as const;
 }
 
-export async function upsertProduct(input: { id?: number; sku: string; name: string; category: "phone_screen" | "charging_port" | "battery" | "laptop_spare" | "accessory" | "other"; description?: string; compatibility?: string; price: number; stock: number; reorderLevel?: number; availability?: "in_stock" | "low_stock" | "out_of_stock" | "by_order" }) {
+export async function uploadProductImage(input: { id: number; fileName: string; mimeType: "image/jpeg" | "image/png" | "image/webp"; base64: string }) {
+  const bytes = Buffer.from(input.base64, "base64");
+  if (!bytes.length) throw new Error("The selected image is empty");
+  if (bytes.length > 6 * 1024 * 1024) throw new Error("Product images must be 6 MB or smaller");
+  const extension = input.mimeType === "image/png" ? "png" : input.mimeType === "image/webp" ? "webp" : "jpg";
+  const uploaded = await storagePut(`products/${input.id}/${Date.now()}.${extension}`, bytes, input.mimeType);
   const db = await requireDb();
-  const values = clean({ sku: input.sku, name: input.name, category: input.category, description: input.description, compatibility: input.compatibility, price: input.price, stock: input.stock, reorderLevel: input.reorderLevel ?? 2, availability: input.availability ?? (input.stock > 2 ? "in_stock" : input.stock > 0 ? "low_stock" : "out_of_stock"), updatedAt: new Date() });
-  const { error } = input.id ? await db.from("products").update(values).eq("id", input.id) : await db.from("products").insert(values);
+  const { error } = await db.from("products").update({ imageUrl: uploaded.url, updatedAt: new Date() }).eq("id", input.id);
   if (error) throw new Error(error.message);
-  return { success: true } as const;
+  return { imageUrl: uploaded.url } as const;
+}
+
+export async function upsertProduct(input: { id?: number; sku: string; name: string; category: "phone_screen" | "charging_port" | "battery" | "laptop_spare" | "accessory" | "other"; description?: string; compatibility?: string; imageUrl?: string; price: number; stock: number; reorderLevel?: number; availability?: "in_stock" | "low_stock" | "out_of_stock" | "by_order" }) {
+  const db = await requireDb();
+  const values = clean({ sku: input.sku, name: input.name, category: input.category, description: input.description, compatibility: input.compatibility, imageUrl: input.imageUrl, price: input.price, stock: input.stock, reorderLevel: input.reorderLevel ?? 2, availability: input.availability ?? (input.stock > 2 ? "in_stock" : input.stock > 0 ? "low_stock" : "out_of_stock"), updatedAt: new Date() });
+  if (input.id) {
+    const { error } = await db.from("products").update(values).eq("id", input.id);
+    if (error) throw new Error(error.message);
+    return { success: true, id: input.id } as const;
+  }
+  const { data, error } = await db.from("products").insert(values).select("id").single();
+  if (error) throw new Error(error.message);
+  return { success: true, id: data.id as number } as const;
 }
 
 export async function removeProduct(input: { id: number }) {
