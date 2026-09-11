@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import PublicShell from "@/components/PublicShell";
 
 const serviceCards = [
-  { icon: Smartphone, label: "Phone repair", copy: "Screen, battery, charging and software support you can count on.", href: "/repair", tone: "cyan", image: "/brand/dph-repair-bench-portrait.webp", imageAlt: "Digital Phone Hub technician at the repair counter" },
+  { icon: Smartphone, label: "Phone repair in Siaya", copy: "Screen, battery, charging and software support you can count on.", href: "/phone-repair-siaya", tone: "cyan", image: "/brand/dph-repair-bench-portrait.webp", imageAlt: "Digital Phone Hub technician at the repair counter" },
   { icon: Laptop, label: "Laptop service", copy: "Diagnostics, charging, keyboard and storage support for work and home.", href: "/repair?device=laptop", tone: "violet", image: "/brand/dph-service-desk-portrait.webp", imageAlt: "Digital Phone Hub service desk with a laptop and accessories" },
   { icon: Cpu, label: "Electronics diagnostics", copy: "Practical checks for speakers, power units, accessories and everyday electronics.", href: "/repair?device=electronics", tone: "emerald", image: "/brand/dph-service-desk-portrait.webp", imageAlt: "Digital Phone Hub service desk for electronics diagnostics" },
   { icon: Package, label: "Parts & accessories", copy: "Find the right screens, batteries, chargers and accessories for your device.", href: "/spares", tone: "orange", image: "/brand/dph-storefront-sign-wide.webp", imageAlt: "Digital Electronics storefront sign for phone repair and accessories" },

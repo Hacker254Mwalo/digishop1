@@ -46,3 +46,18 @@ Google’s sitemap guidance recommends UTF-8 sitemaps with fully qualified absol
 ## Custom-domain audit
 
 The Vercel project has the custom domains `digitalelectronics.tech` and `www.digitalelectronics.tech`, plus Vercel aliases. The apex domain redirects to the `www` host, so `https://www.digitalelectronics.tech/` should be treated as the canonical public host for canonical tags, Open Graph URLs, sitemap entries, and Search Console setup. The live `https://www.digitalelectronics.tech/robots.txt` endpoint currently returns 404, confirming that the indexing gap affects the customer-facing custom domain, not only the deployment alias.
+
+## Post-deployment verification
+
+After deployment, the live custom domain was checked again in a browser:
+
+| Endpoint | Result |
+|---|---|
+| `https://www.digitalelectronics.tech/robots.txt` | Served successfully with crawl permissions, private-route exclusions, and a sitemap declaration. |
+| `https://www.digitalelectronics.tech/sitemap.xml` | Served successfully as XML with absolute URLs for `/`, `/repair`, and `/spares`. |
+
+The technical indexing foundation is now in place. The remaining step that cannot be completed safely without the owner’s Google account is property verification and sitemap submission in Google Search Console, followed by URL Inspection and “Request indexing.”
+
+## Final live page verification
+
+The deployed homepage now returns the title `Phone Repair in Siaya | Digital Phone Hub`, the canonical `https://www.digitalelectronics.tech/`, an index/follow robots directive, Open Graph metadata, and two JSON-LD blocks containing the LocalBusiness and WebSite graph. The `/spares` route returns the distinct title `Phone Spare Parts & Accessories in Kenya | Digital Phone Hub` and continues to expose the visible catalogue/search/order flow. This confirms the route-aware metadata is live rather than only present in source code.

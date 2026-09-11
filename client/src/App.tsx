@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import RepairBooking from "./pages/RepairBooking";
 import RepairStatus from "./pages/RepairStatus";
 import SpareParts from "./pages/SpareParts";
+import PhoneRepairSiaya from "./pages/PhoneRepairSiaya";
 import SeoHead from "./components/SeoHead";
 
 function AdminRoute() {
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/repair" component={RepairBooking} />
       <Route path="/repair-status" component={RepairStatus} />
       <Route path="/spares" component={SpareParts} />
+      <Route path="/phone-repair-siaya" component={PhoneRepairSiaya} />
       <Route path="/owner-login" component={OwnerLogin} />
       <Route path="/admin" component={AdminRoute} />
       <Route path="/404" component={NotFound} />

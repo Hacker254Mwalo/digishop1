@@ -68,6 +68,13 @@ const configs: Record<string, SeoConfig> = {
     robots: "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
     type: "website",
   },
+  "/phone-repair-siaya": {
+    title: "Phone Repair in Siaya for Screens, Batteries & Charging | Digital Phone Hub",
+    description: "Need phone repair in Siaya? Digital Phone Hub helps with cracked screens, weak batteries, charging faults and software problems, with clear advice before work begins.",
+    canonical: `${SITE_URL}/phone-repair-siaya`,
+    robots: "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
+    type: "service",
+  },
   "/repair-status": {
     title: "Track Your Phone Repair | Digital Phone Hub",
     description: "Check the progress of your Digital Phone Hub repair using your repair reference.",
@@ -153,14 +160,15 @@ export default function SeoHead() {
       },
     ];
     if (config.type === "service") {
+      const isSiayaPhoneRepair = location.split("?")[0] === "/phone-repair-siaya";
       graph.push({
         "@type": "Service",
-        "@id": `${SITE_URL}/repair#service`,
-        name: "Phone, laptop and electronics repair",
-        serviceType: "Device repair and diagnostics",
+        "@id": `${SITE_URL}${isSiayaPhoneRepair ? "/phone-repair-siaya" : "/repair"}#service`,
+        name: isSiayaPhoneRepair ? "Phone repair in Siaya" : "Phone, laptop and electronics repair",
+        serviceType: isSiayaPhoneRepair ? "Phone screen, battery, charging and software repair" : "Device repair and diagnostics",
         provider: { "@id": BUSINESS_ID },
         areaServed: [{ "@type": "City", name: "Siaya" }, { "@type": "Country", name: "Kenya" }],
-        url: `${SITE_URL}/repair`,
+        url: `${SITE_URL}${isSiayaPhoneRepair ? "/phone-repair-siaya" : "/repair"}`,
       });
     }
     if (location.split("?")[0] === "/spares") {
