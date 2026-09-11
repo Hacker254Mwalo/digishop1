@@ -62,8 +62,8 @@ const configs: Record<string, SeoConfig> = {
     type: "service",
   },
   "/spares": {
-    title: "Phone Spare Parts & Accessories in Kenya | Digital Phone Hub",
-    description: "Find phone screens, batteries, charging parts, laptop spares and accessories from Digital Phone Hub. Check compatibility and order for delivery or collection.",
+    title: "Phone Parts, Laptops & Electronics in Kenya | Digital Phone Hub",
+    description: "Shop phone screens, batteries, charging parts, laptops, accessories and electronics from Digital Phone Hub. Order for delivery, collect in Siaya, or visit the seller’s website.",
     canonical: `${SITE_URL}/spares`,
     robots: "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
     type: "website",
@@ -175,7 +175,7 @@ export default function SeoHead() {
       graph.push({
         "@type": "CollectionPage",
         "@id": `${SITE_URL}/spares#catalogue`,
-        name: "Phone spare parts and accessories",
+        name: "Phone parts, laptops and electronics catalogue",
         url: `${SITE_URL}/spares`,
         about: { "@id": BUSINESS_ID },
         mainEntity: {

@@ -82,10 +82,10 @@ export async function createOrderRequest(input: { customer: CustomerInput; fulfi
   if (!input.items.length) throw new Error("At least one item is required");
   const customer = await findOrCreateCustomer(input.customer);
   const productIds = input.items.map(item => item.productId).filter((id): id is number => typeof id === "number");
-  const catalogProducts = productIds.length ? await many(db.from("products").select("id,name,price,availability,active").in("id", productIds)) : [];
+  const catalogProducts = productIds.length ? await many(db.from("products").select("id,name,price,availability,active,stock,productType,externalUrl").in("id", productIds)) : [];
   const resolvedItems = input.items.map(item => {
     const catalogProduct = item.productId ? catalogProducts.find(product => product.id === item.productId) : null;
-    if (item.productId && (!catalogProduct || !catalogProduct.active || catalogProduct.availability === "out_of_stock")) throw new Error(`Product ${item.productName} is no longer available`);
+    if (item.productId && (!catalogProduct || !catalogProduct.active || catalogProduct.externalUrl || catalogProduct.availability === "out_of_stock" || (catalogProduct.availability !== "by_order" && catalogProduct.productType !== "service" && item.quantity > catalogProduct.stock))) throw new Error(`Product ${item.productName} is no longer available in the requested quantity`);
     return { ...item, productName: catalogProduct?.name ?? item.productName, unitPrice: catalogProduct?.price ?? 0 };
   });
   const total = resolvedItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -204,9 +204,9 @@ export async function uploadProductImage(input: { id: number; fileName: string; 
   return { imageUrl: uploaded.url } as const;
 }
 
-export async function upsertProduct(input: { id?: number; sku: string; name: string; category: "phone_screen" | "charging_port" | "battery" | "laptop_spare" | "accessory" | "other"; description?: string; compatibility?: string; imageUrl?: string; price: number; stock: number; reorderLevel?: number; availability?: "in_stock" | "low_stock" | "out_of_stock" | "by_order" }) {
+export async function upsertProduct(input: { id?: number; sku: string; name: string; category: "phone_screen" | "charging_port" | "battery" | "laptop_spare" | "accessory" | "other"; productType?: "part" | "device" | "accessory" | "service"; description?: string; compatibility?: string; imageUrl?: string; externalUrl?: string; price: number; stock: number; reorderLevel?: number; availability?: "in_stock" | "low_stock" | "out_of_stock" | "by_order" }) {
   const db = await requireDb();
-  const values = clean({ sku: input.sku, name: input.name, category: input.category, description: input.description, compatibility: input.compatibility, imageUrl: input.imageUrl, price: input.price, stock: input.stock, reorderLevel: input.reorderLevel ?? 2, availability: input.availability ?? (input.stock > 2 ? "in_stock" : input.stock > 0 ? "low_stock" : "out_of_stock"), updatedAt: new Date() });
+  const values = clean({ sku: input.sku, name: input.name, category: input.category, productType: input.productType ?? "part", description: input.description, compatibility: input.compatibility, imageUrl: input.imageUrl, externalUrl: input.externalUrl || null, price: input.price, stock: input.stock, reorderLevel: input.reorderLevel ?? 2, availability: input.availability ?? (input.stock > 2 ? "in_stock" : input.stock > 0 ? "low_stock" : "out_of_stock"), updatedAt: new Date() });
   if (input.id) {
     const { error } = await db.from("products").update(values).eq("id", input.id);
     if (error) throw new Error(error.message);
