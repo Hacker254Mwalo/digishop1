@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import RepairBooking from "./pages/RepairBooking";
 import RepairStatus from "./pages/RepairStatus";
 import SpareParts from "./pages/SpareParts";
+import SeoHead from "./components/SeoHead";
 
 function AdminRoute() {
   const { user, loading } = useAuth();
@@ -47,6 +48,7 @@ export default function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
+          <SeoHead />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

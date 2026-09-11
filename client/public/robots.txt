@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /owner-login
+Disallow: /api/
+
+Sitemap: https://www.digitalelectronics.tech/sitemap.xml
