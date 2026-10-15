@@ -33,3 +33,11 @@
 - [x] Correct any repository/deployment entrypoint mismatch without changing database data.
 - [x] Validate the corrected production artifact and provide the redeploy handoff.
 - [ ] Register the Express app at a Vercel-recognized root entrypoint and verify `/api/trpc/*` on the live domain.
+
+- [x] Rebuild the public homepage around real repair, tracking, shop and human-contact decisions instead of decorative marketing copy.
+- [x] Add symptom-led repair triage that pre-fills the repair request with the device type and customer wording.
+- [x] Improve mobile conversion with persistent call, WhatsApp and booking actions.
+- [x] Improve spare-part selling with product-detail WhatsApp enquiries, compatibility messaging, by-order inventory support and clear empty-catalogue request paths.
+- [x] Improve owner product operations with validated image preview, listing thumbnails and replacement-image uploads for existing products.
+- [x] Add the public route manifest and a Vercel catch-all API entrypoint for nested tRPC routes.
+- [x] Validate TypeScript, 9 automated tests, production build, local public routes and local `/api/trpc/auth.me` response.
