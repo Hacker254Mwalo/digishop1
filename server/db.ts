@@ -108,15 +108,16 @@ async function countWhere(table: string, filters: Array<[string, string]>) {
 
 export async function getDashboardSummary() {
   const db = await requireDb();
-  const [newRepairs, activeRows, readyRepairs, products, pendingOrders, activeTechnicians] = await Promise.all([
+  const [newRepairs, activeRows, awaitingApproval, readyRepairs, products, pendingOrders, activeTechnicians] = await Promise.all([
     countWhere("repairTickets", [["status", "received"]]),
     many(db.from("repairTickets").select("id,status").in("status", ["diagnostics", "awaiting_approval", "in_repair"])),
+    countWhere("repairTickets", [["status", "awaiting_approval"]]),
     countWhere("repairTickets", [["status", "ready"]]),
     many(db.from("products").select("stock,reorderLevel").eq("active", true)),
     countWhere("orderRequests", [["status", "new"]]),
     countWhere("technicians", [["active", "true"]]),
   ]);
-  return { newRepairs, activeRepairs: activeRows.length, readyRepairs, lowStock: products.filter(product => product.stock <= product.reorderLevel).length, pendingOrders, activeTechnicians };
+  return { newRepairs, activeRepairs: activeRows.length, awaitingApproval, readyRepairs, lowStock: products.filter(product => product.stock <= product.reorderLevel).length, pendingOrders, activeTechnicians };
 }
 
 export async function listRepairTickets() {
@@ -135,7 +136,7 @@ export async function getRepairStatus(reference: string) {
   const ticket = await maybe(db.from("repairTickets").select("*").eq("reference", reference).limit(1).maybeSingle());
   if (!ticket) return null;
   const device = await maybe(db.from("devices").select("brand,model").eq("id", ticket.deviceId).limit(1).maybeSingle());
-  return { reference: ticket.reference, status: ticket.status, issue: ticket.issue, device: device ? `${device.brand} ${device.model}` : "Device", receivedAt: ticket.receivedAt };
+  return { reference: ticket.reference, status: ticket.status, issue: ticket.issue, quotedAmount: ticket.quotedAmount, device: device ? `${device.brand} ${device.model}` : "Device", receivedAt: ticket.receivedAt };
 }
 
 export async function getRepairHistory(input: { customerId: number; deviceId: number }) {
