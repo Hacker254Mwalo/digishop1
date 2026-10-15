@@ -56,14 +56,14 @@ export default function Home() {
     <PublicShell>
       <main>
         <section className="relative isolate overflow-hidden border-b border-white/[0.08] bg-[#081018]">
-          <div className="absolute inset-0 -z-20 bg-[url('/brand/dph-repair-bench-portrait.webp')] bg-cover bg-center opacity-[0.22]" aria-hidden="true" />
-          <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,#081018_0%,rgba(8,16,24,.95)_34%,rgba(8,16,24,.68)_68%,rgba(8,16,24,.88)_100%)]" aria-hidden="true" />
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_76%_20%,rgba(34,211,238,.18),transparent_24%),linear-gradient(180deg,rgba(8,16,24,.05),#081018_94%)]" aria-hidden="true" />
+          <div className="absolute inset-0 -z-20 bg-[url('/brand/dph-storefront-sign-wide.webp')] bg-cover bg-[center_34%] opacity-[0.34]" aria-hidden="true" />
+          <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,#081018_0%,rgba(8,16,24,.96)_30%,rgba(8,16,24,.62)_62%,rgba(8,16,24,.42)_100%)]" aria-hidden="true" />
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_78%_22%,rgba(34,211,238,.17),transparent_25%),linear-gradient(180deg,rgba(8,16,24,.08),#081018_96%)]" aria-hidden="true" />
           <div className="mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-14 sm:px-6 sm:pt-20 lg:grid-cols-[1.08fr_.72fr] lg:items-center lg:gap-20 lg:px-8 lg:pb-24 lg:pt-24">
             <div className="animate-fade-up">
               <div className="flex items-center gap-3 text-[11px] font-extrabold uppercase tracking-[0.22em] text-cyan-200"><span className="h-px w-10 bg-cyan-300" />Siaya service desk · Parts across Kenya</div>
-              <h1 className="mt-6 max-w-4xl text-balance text-5xl font-extrabold leading-[.94] tracking-[-0.08em] text-white sm:text-7xl lg:text-[6.2rem]">Your device, <span className="text-cyan-200">properly looked after.</span></h1>
-              <p className="mt-7 max-w-xl text-base leading-7 text-slate-300 sm:text-lg">Phone, laptop and electronics care that starts with the real problem. Get a clear next step, a compatible part or a repair you understand before you approve it.</p>
+              <h1 className="mt-6 max-w-3xl text-balance text-5xl font-extrabold leading-[.97] tracking-[-0.075em] text-white sm:text-6xl lg:text-[5.25rem]">Your device, <span className="text-cyan-200">properly looked after.</span></h1>
+              <p className="mt-7 max-w-lg text-base leading-7 text-slate-300 sm:text-[1.05rem]">Phone, laptop and electronics care that starts with the real problem. Get a clear next step, a compatible part or a repair you understand before you approve it.</p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row"><Link href="#repair-help" className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-300 px-6 py-3.5 text-sm font-extrabold text-slate-950 shadow-[0_14px_34px_rgba(84,231,222,.15)] transition hover:-translate-y-0.5 hover:bg-cyan-200">Start with the problem <ArrowRight className="h-4 w-4" /></Link><Link href="/spares" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/[0.16] bg-black/20 px-6 py-3.5 text-sm font-bold text-white transition hover:border-orange-200/40 hover:bg-black/35">Shop parts & accessories <Package className="h-4 w-4 text-orange-200" /></Link></div>
               <div className="mt-10 flex flex-wrap gap-x-7 gap-y-3 border-t border-white/[0.12] pt-5 text-xs text-slate-400"><span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-cyan-200" />Siaya Town desk</span><span className="flex items-center gap-2"><Package className="h-4 w-4 text-orange-200" />Delivery or collection</span><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-200" />Approval before repair</span></div>
             </div>
