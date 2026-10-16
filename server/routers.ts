@@ -23,6 +23,7 @@ import {
   removeProduct,
   uploadProductImage,
 } from "./db";
+import { adminCopilot, repairHelper } from "./ai";
 
 const customerInput = z.object({
   name: z.string().trim().min(2).max(160),
@@ -57,6 +58,7 @@ export const appRouter = router({
   }),
   public: router({
     products: publicProcedure.query(() => listProducts()),
+    repairHelper: publicProcedure.input(z.object({ deviceType: z.enum(["phone", "laptop", "electronics"]), brand: z.string().trim().min(1).max(100), model: z.string().trim().min(1).max(160), issue: z.string().trim().min(5).max(2000) })).mutation(({ input }) => repairHelper(input)),
     createRepairRequest: publicProcedure.input(z.object({ customer: customerInput, device: deviceInput, issue: z.string().trim().min(5).max(4000), priority: z.enum(["low", "normal", "high", "urgent"]).optional() })).mutation(({ input }) => createRepairRequest(input)),
     createOrderRequest: publicProcedure.input(z.object({ customer: customerInput, fulfillment: z.enum(["delivery", "collection"]), deliveryLocation: z.string().trim().max(180).optional(), notes: z.string().trim().max(2000).optional(), items: z.array(z.object({ productId: z.number().int().positive().optional(), productName: z.string().trim().min(1).max(180), quantity: z.number().int().positive().max(20), unitPrice: z.number().int().nonnegative() })).min(1).max(40) })).mutation(({ input }) => createOrderRequest(input)),
     getRepairStatus: publicProcedure.input(z.object({ reference: z.string().trim().min(6).max(32) })).query(({ input }) => getRepairStatus(input.reference)),
@@ -76,6 +78,7 @@ export const appRouter = router({
     uploadProductImage: adminProcedure.input(z.object({ id: z.number().int().positive(), fileName: z.string().trim().min(1).max(180), mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]), base64: z.string().min(100).max(8500000) })).mutation(({ input }) => uploadProductImage(input)),
     removeProduct: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => removeProduct(input)),
     updateOrder: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["new", "confirmed", "fulfilled", "cancelled"]) })).mutation(({ input }) => updateOrderStatus(input)),
+    copilot: adminProcedure.input(z.object({ question: z.string().trim().min(3).max(600) })).mutation(({ input }) => adminCopilot(input.question)),
   }),
 });
 

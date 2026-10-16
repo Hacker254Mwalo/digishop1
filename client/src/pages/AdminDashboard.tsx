@@ -34,6 +34,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import AdminCopilot from "@/components/AdminCopilot";
 
 type Section = "overview" | "repairs" | "inventory" | "orders" | "team";
 const repairStatuses = ["received", "diagnostics", "awaiting_approval", "in_repair", "ready", "collected", "cancelled"] as const;
@@ -295,6 +296,7 @@ export default function AdminDashboard() {
             <Metric label="Orders" value={summary.data?.pendingOrders ?? 0} hint="Waiting for confirmation" icon={PackagePlus} tone="border-orange-300/20 bg-orange-300/10 text-orange-100" />
             <Metric label="Team" value={summary.data?.activeTechnicians ?? 0} hint="Available technicians" icon={Users} tone="border-emerald-300/20 bg-emerald-300/10 text-emerald-100" />
           </section>
+          <AdminCopilot />
           <div className="grid gap-6 lg:grid-cols-[1.25fr_.75fr]">
             <section className="premium-panel premium-panel-hover rounded-3xl p-6">
               <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Attention board</p><h2 className="mt-2 text-xl font-semibold">What needs a decision?</h2></div><button className="text-sm font-semibold text-primary" onClick={() => selectSection("repairs")}>View queue <ArrowUpRight className="ml-1 inline h-4 w-4" /></button></div>
