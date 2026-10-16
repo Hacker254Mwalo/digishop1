@@ -213,14 +213,19 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : ENV.openAiApiBase && ENV.openAiApiBase.trim().length > 0
+const resolveApiUrl = () => {
+  if (ENV.forgeApiKey) {
+    return ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+      ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
+      : "https://forge.manus.im/v1/chat/completions";
+  }
+  if (ENV.openAiApiKey) {
+    return ENV.openAiApiBase && ENV.openAiApiBase.trim().length > 0
       ? `${ENV.openAiApiBase.replace(/\/$/, "")}/chat/completions`
-      : ENV.openAiApiKey
-        ? "https://api.openai.com/v1/chat/completions"
-    : "https://forge.manus.im/v1/chat/completions";
+      : "https://api.openai.com/v1/chat/completions";
+  }
+  return "https://forge.manus.im/v1/chat/completions";
+};
 
 const assertApiKey = () => {
   if (!ENV.forgeApiKey && !ENV.openAiApiKey) {
