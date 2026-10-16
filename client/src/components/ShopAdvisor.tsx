@@ -1,0 +1,13 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { trpc } from "@/lib/trpc";
+import { Loader2, Search, Sparkles } from "lucide-react";
+import { useState } from "react";
+
+export default function ShopAdvisor({ onUseSearch }: { onUseSearch: (value: string) => void }) {
+  const [query, setQuery] = useState("");
+  const [result, setResult] = useState<{ advice: string; skus: string[]; aiPowered: boolean } | null>(null);
+  const advisor = trpc.public.productAdvisor.useMutation({ onSuccess: setResult });
+  const ask = () => { if (query.trim()) advisor.mutate({ query: query.trim() }); };
+  return <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-4 sm:p-5"><div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cyan-300/10 text-cyan-200"><Sparkles className="h-4 w-4" /></span><div><p className="text-sm font-semibold text-cyan-100">Not sure what to search for?</p><p className="mt-1 text-xs leading-5 text-slate-400">Describe the device, model and what you need in normal words. We will point you to the closest listings.</p></div></div><div className="mt-4 flex flex-col gap-2 sm:flex-row"><div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500" /><Input value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") ask(); }} placeholder="e.g. charger for HP EliteBook 840" className="pl-9" aria-label="Describe what you need" /></div><Button type="button" onClick={ask} disabled={!query.trim() || advisor.isPending}>{advisor.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}Find for me</Button></div>{result && <div className="mt-4 rounded-xl border border-white/10 bg-slate-950/40 p-3"><p className="text-sm leading-6 text-slate-200">{result.advice}</p>{result.skus.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{result.skus.map(sku => <button key={sku} type="button" onClick={() => onUseSearch(sku)} className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-300/20">Search {sku}</button>)}</div>}<p className="mt-3 text-[11px] text-slate-500">{result.aiPowered ? "AI-assisted catalogue guidance · confirm compatibility before ordering" : "Smart catalogue guidance · confirm compatibility before ordering"}</p></div>}{advisor.error && <p className="mt-3 text-xs text-amber-200">The advisor is unavailable. You can still search the catalogue or contact the service desk.</p>}</div>;
+}

@@ -62,6 +62,7 @@ export type InvokeParams = {
   tool_choice?: ToolChoice;
   maxTokens?: number;
   max_tokens?: number;
+  maxCompletionTokens?: number;
   outputSchema?: OutputSchema;
   output_schema?: OutputSchema;
   responseFormat?: ResponseFormat;
@@ -215,10 +216,14 @@ const normalizeToolChoice = (
 const resolveApiUrl = () =>
   ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
     ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
+    : ENV.openAiApiBase && ENV.openAiApiBase.trim().length > 0
+      ? `${ENV.openAiApiBase.replace(/\/$/, "")}/chat/completions`
+      : ENV.openAiApiKey
+        ? "https://api.openai.com/v1/chat/completions"
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
+  if (!ENV.forgeApiKey && !ENV.openAiApiKey) {
     throw new Error("OPENAI_API_KEY is not configured");
   }
 };
@@ -356,6 +361,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     reasoning,
     maxTokens,
     max_tokens,
+    maxCompletionTokens,
   } = params;
 
   const payload: Record<string, unknown> = {
@@ -382,6 +388,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   if (typeof resolvedMaxTokens === "number") {
     payload.max_tokens = resolvedMaxTokens;
   }
+  if (typeof maxCompletionTokens === "number") {
+    payload.max_completion_tokens = maxCompletionTokens;
+  }
 
   if (thinking) {
     payload.thinking = thinking;
@@ -405,7 +414,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${ENV.forgeApiKey || ENV.openAiApiKey}`,
     },
     body: JSON.stringify(payload),
   });

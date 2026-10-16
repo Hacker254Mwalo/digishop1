@@ -49,8 +49,24 @@ export async function repairHelper(input: RepairHelperInput): Promise<RepairHelp
         { role: "system", content: "You are the careful intake assistant for Digital Phone Hub in Siaya, Kenya. Do not diagnose with certainty, promise a price, or recommend unsafe steps. Return only valid JSON with keys summary, recommendedPath (repair|parts|inspection), suggestedPriority (low|normal|high|urgent), questions (array of exactly 3 short questions). Mention that final diagnosis requires inspection when appropriate." },
         { role: "user", content: JSON.stringify({ deviceType: input.deviceType, brand: input.brand, model: input.model, issue: input.issue }) },
       ],
-      maxTokens: 360,
-      responseFormat: { type: "json_object" },
+      model: process.env.AI_MODEL || "gpt-5-mini",
+      maxCompletionTokens: 320,
+      reasoning: { effort: "minimal" },
+      outputSchema: {
+        name: "repair_intake",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            summary: { type: "string" },
+            recommendedPath: { type: "string", enum: ["repair", "parts", "inspection"] },
+            suggestedPriority: { type: "string", enum: ["low", "normal", "high", "urgent"] },
+            questions: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 3 },
+          },
+          required: ["summary", "recommendedPath", "suggestedPriority", "questions"],
+          additionalProperties: false,
+        },
+      },
     });
     const parsed = JSON.parse(textFromResult(result)) as Partial<RepairHelperResult>;
     if (!parsed.summary || !Array.isArray(parsed.questions)) return fallback;
@@ -101,11 +117,38 @@ export async function adminCopilot(question: string) {
         { role: "system", content: "You are the read-only operations copilot for Digital Phone Hub. Use only the supplied inventory, repair and order context. Never invent data. Do not expose customer names, phone numbers or emails. Give a concise practical answer in plain English. You may recommend an owner action, but you cannot change records." },
         { role: "user", content: JSON.stringify({ question, context }) },
       ],
-      maxTokens: 520,
+      model: process.env.AI_MODEL || "gpt-5-mini",
+      maxCompletionTokens: 520,
+      reasoning: { effort: "minimal" },
     });
     const answer = textFromResult(result).trim();
     return { answer: answer || fallback, aiPowered: Boolean(answer) };
   } catch {
     return { answer: fallback, aiPowered: false };
+  }
+}
+
+export async function productAdvisor(query: string) {
+  const products = await listProducts();
+  const catalogue = products.map(product => ({ sku: product.sku, name: product.name, category: product.category, compatibility: product.compatibility, description: product.description, availability: product.availability, stock: product.stock })).slice(0, 160);
+  const fallbackMatches = products.filter(product => `${product.name} ${product.category} ${product.compatibility ?? ""} ${product.description ?? ""}`.toLowerCase().split(/\s+/).some(word => query.toLowerCase().includes(word) || word.includes(query.toLowerCase()))).slice(0, 5);
+  const fallback = { advice: fallbackMatches.length ? "These listings look closest to what you described. Confirm the exact model with the service desk before ordering a part." : "Tell us the device brand, model and what you need. We will narrow down the right part or accessory.", skus: fallbackMatches.map(product => product.sku), aiPowered: false };
+  try {
+    const result = await invokeLLM({
+      model: process.env.AI_MODEL || "gpt-5-mini",
+      messages: [
+        { role: "system", content: "You help customers find products in a small phone and electronics shop. Use only the supplied catalogue. Never invent stock, price or compatibility. Recommend up to 5 SKU values and give one short practical note. If compatibility is uncertain, say the service desk should confirm before ordering." },
+        { role: "user", content: JSON.stringify({ request: query, catalogue }) },
+      ],
+      maxCompletionTokens: 280,
+      reasoning: { effort: "minimal" },
+      outputSchema: { name: "product_advice", strict: true, schema: { type: "object", properties: { advice: { type: "string" }, skus: { type: "array", items: { type: "string" }, maxItems: 5 } }, required: ["advice", "skus"], additionalProperties: false } },
+    });
+    const parsed = JSON.parse(textFromResult(result)) as { advice?: string; skus?: string[] };
+    const allowed = new Set(catalogue.map(item => item.sku));
+    const skus = (parsed.skus ?? []).filter(sku => allowed.has(sku)).slice(0, 5);
+    return { advice: parsed.advice || fallback.advice, skus, aiPowered: true };
+  } catch {
+    return fallback;
   }
 }
