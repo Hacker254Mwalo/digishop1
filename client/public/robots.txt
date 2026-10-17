@@ -4,4 +4,4 @@ Disallow: /admin
 Disallow: /owner-login
 Disallow: /api/
 
-Sitemap: https://www.digitalelectronics.tech/sitemap.xml
+Sitemap: https://digitalelectronics.tech/sitemap.xml

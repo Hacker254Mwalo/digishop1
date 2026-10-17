@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
-const SITE_URL = "https://www.digitalelectronics.tech";
+const SITE_URL = "https://digitalelectronics.tech";
 const BUSINESS_ID = `${SITE_URL}/#business`;
 
 type SeoConfig = {
   title: string;
   description: string;
+  keywords: string;
   canonical: string;
   robots: string;
   type: "website" | "service";
@@ -48,29 +49,33 @@ const businessSchema = {
 
 const configs: Record<string, SeoConfig> = {
   "/": {
-    title: "Phone Repair in Siaya | Digital Phone Hub",
-    description: "Trusted phone repair in Siaya for screen, battery, charging and software problems, with laptop support and spare parts available across Kenya.",
+    title: "Phone Repair in Siaya Town | Digital Phone Hub",
+    description: "Need phone repair in Siaya Town? Digital Phone Hub checks screen, battery and charging faults first, with laptop service and compatible parts too.",
+    keywords: "phone repair Siaya, laptop repair Siaya, phone parts Kenya, Digital Phone Hub",
     canonical: `${SITE_URL}/`,
     robots: "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
     type: "website",
   },
   "/repair": {
-    title: "Phone, Laptop & Electronics Repair in Siaya | Digital Phone Hub",
-    description: "Book phone, laptop and electronics repair in Siaya. Digital Phone Hub checks the fault first, explains the next step and keeps you informed.",
+    title: "Phone & Laptop Repair in Siaya | Digital Phone Hub",
+    description: "Request phone, laptop or electronics repair in Siaya. Share the brand, model and symptoms. We review the fault and confirm the next step before work.",
+    keywords: "phone repair Siaya, laptop repair Siaya, electronics repair Siaya, Digital Phone Hub",
     canonical: `${SITE_URL}/repair`,
     robots: "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
     type: "service",
   },
   "/spares": {
-    title: "Phone Parts, Laptops & Electronics in Kenya | Digital Phone Hub",
-    description: "Shop phone screens, batteries, charging parts, laptops, accessories and electronics from Digital Phone Hub. Order for delivery, collect in Siaya, or visit the seller’s website.",
+    title: "Phone Parts & Accessories Siaya | Digital Phone Hub",
+    description: "Find phone screens, batteries, chargers, cables and laptop parts. Digital Phone Hub helps check device compatibility before you request an item.",
+    keywords: "phone parts Siaya, phone accessories Kenya, laptop parts Kenya, Digital Phone Hub",
     canonical: `${SITE_URL}/spares`,
     robots: "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
     type: "website",
   },
   "/phone-repair-siaya": {
-    title: "Phone Repair in Siaya for Screens, Batteries & Charging | Digital Phone Hub",
-    description: "Need phone repair in Siaya? Digital Phone Hub helps with cracked screens, weak batteries, charging faults and software problems, with clear advice before work begins.",
+    title: "Phone Repair Siaya | Digital Phone Hub",
+    description: "Need phone repair in Siaya? Get help with cracked screens, weak batteries, charging faults and software problems, with clear advice before work begins.",
+    keywords: "phone repair Siaya, screen replacement Siaya, battery replacement Siaya, Digital Phone Hub",
     canonical: `${SITE_URL}/phone-repair-siaya`,
     robots: "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
     type: "service",
@@ -78,6 +83,7 @@ const configs: Record<string, SeoConfig> = {
   "/repair-status": {
     title: "Track Your Phone Repair | Digital Phone Hub",
     description: "Check the progress of your Digital Phone Hub repair using your repair reference.",
+    keywords: "repair tracking, phone repair Siaya, Digital Phone Hub",
     canonical: `${SITE_URL}/repair-status`,
     robots: "noindex,follow",
     type: "website",
@@ -85,6 +91,7 @@ const configs: Record<string, SeoConfig> = {
   "/owner-login": {
     title: "Owner Login | Digital Phone Hub",
     description: "Private Digital Phone Hub owner access.",
+    keywords: "Digital Phone Hub, owner login, business portal",
     canonical: `${SITE_URL}/owner-login`,
     robots: "noindex,nofollow",
     type: "website",
@@ -92,6 +99,7 @@ const configs: Record<string, SeoConfig> = {
   "/admin": {
     title: "Owner Portal | Digital Phone Hub",
     description: "Private Digital Phone Hub owner portal.",
+    keywords: "Digital Phone Hub, owner portal, business login",
     canonical: `${SITE_URL}/admin`,
     robots: "noindex,nofollow",
     type: "website",
@@ -102,6 +110,7 @@ function getConfig(pathname: string): SeoConfig {
   return configs[pathname] ?? {
     title: "Digital Phone Hub | Repair & Electronics",
     description: "Digital Phone Hub provides phone, laptop and electronics repair in Siaya, with spare parts and accessories available across Kenya.",
+    keywords: "phone repair Siaya, laptop repair Siaya, phone parts Kenya, Digital Phone Hub",
     canonical: `${SITE_URL}${pathname || "/"}`,
     robots: "noindex,follow",
     type: "website",
@@ -135,6 +144,7 @@ export default function SeoHead() {
     const config = getConfig(location.split("?")[0] || "/");
     document.title = config.title;
     upsertMeta('meta[name="description"]', { name: "description" }, config.description);
+    upsertMeta('meta[name="keywords"]', { name: "keywords" }, config.keywords);
     upsertMeta('meta[name="robots"]', { name: "robots" }, config.robots);
     upsertMeta('meta[property="og:title"]', { property: "og:title" }, config.title);
     upsertMeta('meta[property="og:description"]', { property: "og:description" }, config.description);

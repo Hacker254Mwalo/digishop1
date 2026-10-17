@@ -2,21 +2,22 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
-import DashboardLayout from "./components/DashboardLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import AdminDashboard from "./pages/AdminDashboard";
-import OwnerLogin from "./pages/OwnerLogin";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { useLocation } from "wouter";
 import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
-import RepairBooking from "./pages/RepairBooking";
-import RepairStatus from "./pages/RepairStatus";
-import SpareParts from "./pages/SpareParts";
-import PhoneRepairSiaya from "./pages/PhoneRepairSiaya";
 import SeoHead from "./components/SeoHead";
+
+const DashboardLayout = lazy(() => import("./components/DashboardLayout"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const OwnerLogin = lazy(() => import("./pages/OwnerLogin"));
+const RepairBooking = lazy(() => import("./pages/RepairBooking"));
+const RepairStatus = lazy(() => import("./pages/RepairStatus"));
+const SpareParts = lazy(() => import("./pages/SpareParts"));
+const PhoneRepairSiaya = lazy(() => import("./pages/PhoneRepairSiaya"));
 
 function AdminRoute() {
   const { user, loading } = useAuth();
@@ -51,7 +52,9 @@ export default function App() {
         <TooltipProvider>
           <Toaster />
           <SeoHead />
-          <Router />
+          <Suspense fallback={<div className="grid min-h-[65vh] place-items-center gap-3 bg-[#f6f3ee] text-[#657078]"><Loader2 className="h-6 w-6 animate-spin text-[#d94b2b]" /><span className="text-sm font-semibold">Loading this page…</span></div>}>
+            <Router />
+          </Suspense>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
