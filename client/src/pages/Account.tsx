@@ -320,7 +320,6 @@ export default function Account() {
     <PublicShell>
       <main id="main-content" className="min-h-[65vh] bg-[#f6f3ee] px-4 pb-24 pt-7 text-[#202a30] sm:px-6 sm:pb-12">
         <div className="mx-auto max-w-xl">
-          <p className="text-xs font-extrabold uppercase tracking-[.16em] text-[#205c52]">Digital Phone Hub</p>
           <h1 className="mt-2 text-3xl font-black tracking-[-.04em]">Customer account</h1>
           <Link href="/spares" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#56636a] transition hover:text-[#a93823]">Continue as a guest <ArrowRight className="h-4 w-4" /></Link>
           <div className="mt-5">
@@ -368,8 +367,7 @@ export default function Account() {
                 </>
               ) : (
                 <>
-                  <h2 className="mt-2 text-2xl font-black tracking-[-.04em]">{mode === "signup" ? "Create account" : "Sign in"}</h2>
-                  <div className="mt-5 grid grid-cols-2 rounded-xl border border-[#d9d2c8] bg-[#f6f3ee] p-1" role="group" aria-label="Account action"><button type="button" disabled={busy} aria-pressed={mode === "signup"} onClick={() => { setMode("signup"); setErrorMessage(""); setInfoMessage(""); }} className={`rounded-lg px-3 py-2.5 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-60 ${mode === "signup" ? "bg-white text-[#202a30] shadow-sm" : "text-[#56636a]"}`}>Create account</button><button type="button" disabled={busy} aria-pressed={mode === "login"} onClick={() => { setMode("login"); setErrorMessage(""); setInfoMessage(""); }} className={`rounded-lg px-3 py-2.5 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-60 ${mode === "login" ? "bg-white text-[#202a30] shadow-sm" : "text-[#56636a]"}`}>Sign in</button></div>
+                  <div className="grid grid-cols-2 rounded-xl border border-[#d9d2c8] bg-[#f6f3ee] p-1" role="group" aria-label="Account action"><button type="button" disabled={busy} aria-pressed={mode === "signup"} onClick={() => { setMode("signup"); setErrorMessage(""); setInfoMessage(""); }} className={`rounded-lg px-3 py-2.5 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-60 ${mode === "signup" ? "bg-white text-[#202a30] shadow-sm" : "text-[#56636a]"}`}>Create account</button><button type="button" disabled={busy} aria-pressed={mode === "login"} onClick={() => { setMode("login"); setErrorMessage(""); setInfoMessage(""); }} className={`rounded-lg px-3 py-2.5 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-60 ${mode === "login" ? "bg-white text-[#202a30] shadow-sm" : "text-[#56636a]"}`}>Sign in</button></div>
                   {!authClient && <p className="mt-4 rounded-xl border border-[#d94b2b]/20 bg-[#fff1e7] p-3 text-sm leading-5 text-[#87331f]" role="status">SMS sign-in is not enabled yet. Continue as a guest or call 0718 114 009.</p>}
                   <form className="mt-5 space-y-4" onSubmit={sendCode}>
                     <label className="block text-sm font-bold text-[#202a30]">Username<input autoComplete="username" maxLength={24} value={username} onChange={event => setUsername(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-[#cfc5b8] bg-white px-4 text-sm text-[#202a30] outline-none focus:border-[#b53d25] focus:ring-4 focus:ring-[#d94b2b]/10" placeholder="3–24 letters, numbers or _" required /></label>
