@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   env: {
@@ -8,7 +8,7 @@ const state = vi.hoisted(() => ({
     mpesaDarajaShortcode: "123456",
     mpesaDarajaPasskey: "test-passkey",
     mpesaDarajaTransactionType: "CustomerPayBillOnline",
-    mpesaDarajaCallbackUrl: "https://digitalelectronics.tech/api/mpesa/callback",
+    mpesaDarajaCallbackUrl: "https://dph-preview.vercel.app/api/mpesa/callback",
   },
   db: {
     claimDarajaCallback: vi.fn(),
@@ -34,12 +34,36 @@ vi.mock("./env", () => ({ ENV: state.env }));
 
 import { isDarajaConfigured, normalizeKenyanMpesaPhone, reconcileDarajaCallback, startGuestOrderPayment } from "./daraja";
 
+beforeEach(() => {
+  vi.stubEnv("VERCEL_ENV", "preview");
+  vi.stubEnv("VERCEL_URL", "dph-preview.vercel.app");
+});
+
+afterEach(() => vi.unstubAllEnvs());
+
 describe("Daraja configuration", () => {
   it("accepts only the shop's exact HTTPS callback origin and endpoint", () => {
     expect(isDarajaConfigured()).toBe(true);
     state.env.mpesaDarajaCallbackUrl = "https://payments.example/api/mpesa/callback";
     expect(isDarajaConfigured()).toBe(false);
+    state.env.mpesaDarajaCallbackUrl = "https://dph-preview.vercel.app/api/mpesa/callback";
+  });
+
+  it("allows sandbox only on Preview and production only on the Vercel Production deployment", () => {
+    vi.stubEnv("VERCEL_ENV", "development");
+    expect(isDarajaConfigured()).toBe(false);
+
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(isDarajaConfigured()).toBe(false);
+    state.env.mpesaDarajaEnvironment = "production";
     state.env.mpesaDarajaCallbackUrl = "https://digitalelectronics.tech/api/mpesa/callback";
+    expect(isDarajaConfigured()).toBe(true);
+
+    vi.stubEnv("VERCEL_ENV", "preview");
+    expect(isDarajaConfigured()).toBe(false);
+    state.env.mpesaDarajaEnvironment = "sandbox";
+    state.env.mpesaDarajaCallbackUrl = "https://dph-preview.vercel.app/api/mpesa/callback";
+    expect(isDarajaConfigured()).toBe(true);
   });
 });
 
@@ -61,7 +85,7 @@ describe("guest payment initiation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     state.env.mpesaDarajaConsumerKey = "test-consumer-key";
-    state.env.mpesaDarajaCallbackUrl = "https://digitalelectronics.tech/api/mpesa/callback";
+    state.env.mpesaDarajaCallbackUrl = "https://dph-preview.vercel.app/api/mpesa/callback";
     state.db.getOrderPaymentContext.mockResolvedValue({
       order: { id: 25, reference: "DPH-ORD-102030405060708090A0B0C", status: "confirmed", total: 1200 },
       customerPhone: "0718 114 009",

@@ -50,14 +50,19 @@ function readConfiguration(): DarajaConfiguration | null {
   const environment = ENV.mpesaDarajaEnvironment;
   const transactionType = ENV.mpesaDarajaTransactionType;
   const callbackUrl = ENV.mpesaDarajaCallbackUrl;
+  const deploymentEnvironment = process.env.VERCEL_ENV;
+  const deploymentUrl = process.env.VERCEL_URL;
   if (environment !== "sandbox" && environment !== "production") return null;
+  if (environment === "production" && deploymentEnvironment !== "production") return null;
+  if (environment === "sandbox" && deploymentEnvironment !== "preview") return null;
   if (transactionType !== "CustomerPayBillOnline" && transactionType !== "CustomerBuyGoodsOnline") return null;
   if (!ENV.mpesaDarajaConsumerKey || !ENV.mpesaDarajaConsumerSecret || !ENV.mpesaDarajaPasskey) return null;
   if (!/^\d{5,7}$/.test(ENV.mpesaDarajaShortcode)) return null;
 
   try {
     const parsedCallback = new URL(callbackUrl);
-    if (parsedCallback.origin !== "https://digitalelectronics.tech" || parsedCallback.pathname !== "/api/mpesa/callback" || parsedCallback.search || parsedCallback.hash || parsedCallback.username || parsedCallback.password) return null;
+    const expectedOrigin = environment === "production" ? "https://digitalelectronics.tech" : deploymentUrl ? `https://${deploymentUrl}` : "";
+    if (!expectedOrigin || parsedCallback.origin !== expectedOrigin || parsedCallback.pathname !== "/api/mpesa/callback" || parsedCallback.search || parsedCallback.hash || parsedCallback.username || parsedCallback.password) return null;
   } catch {
     return null;
   }
