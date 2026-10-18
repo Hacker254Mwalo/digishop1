@@ -6,7 +6,6 @@
   "outputDirectory": "dist/public",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
-    { "source": "/manus-storage/:path*", "destination": "/api/manus-storage/:path*" },
-    { "source": "/((?!api|_next|assets|manus-storage|favicon.ico|.*\\..*).*)", "destination": "/index.html" }
+    { "source": "/manus-storage/:path*", "destination": "/api/manus-storage/:path*" }
   ]
 }

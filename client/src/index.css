@@ -109,6 +109,11 @@
     @apply border-border outline-ring/50;
   }
 
+  :where(a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [role="button"]):focus-visible {
+    outline: 2px solid #b53d25;
+    outline-offset: 3px;
+  }
+
   html {
     background: #090b10;
     scroll-behavior: smooth;

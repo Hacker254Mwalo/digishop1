@@ -36,7 +36,7 @@ function repairHref(device: string, issue: string) {
 
 export default function Home() {
   return <PublicShell>
-    <main className="bg-[#f6f3ee] text-[#202a30]">
+    <main id="main-content" className="bg-[#f6f3ee] pb-24 text-[#202a30] sm:pb-0">
       <section className="border-b border-[#d9d2c8] bg-[#f6f3ee] px-4 py-7 sm:px-6 lg:px-8 lg:py-12">
         <div className="mx-auto grid max-w-7xl gap-9 lg:grid-cols-[.92fr_1.08fr] lg:items-center lg:gap-14">
           <div className="max-w-xl">
@@ -44,7 +44,7 @@ export default function Home() {
             <h1 className="mt-5 max-w-xl text-balance text-[2.75rem] font-black leading-[.98] tracking-[-.065em] text-[#202a30] sm:text-6xl lg:text-[4.35rem]">A clear answer for a device that is not working.</h1>
             <p className="mt-5 max-w-lg text-[15px] leading-7 text-[#5d6870] sm:text-base">Bring us the problem, the model or even a photo. We diagnose first, explain the sensible option and let you approve before repair.</p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row"><Link href="/repair" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#d94b2b] px-5 py-3 text-sm font-extrabold text-white shadow-lg shadow-[#d94b2b]/20 transition hover:-translate-y-0.5 hover:bg-[#bd3f24]">Book a repair <ArrowRight className="h-4 w-4" /></Link><Link href="/spares" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#cfc5b8] bg-white px-5 py-3 text-sm font-extrabold text-[#26323a] transition hover:-translate-y-0.5 hover:border-[#d94b2b]/50">Shop parts & accessories <Package className="h-4 w-4 text-[#d94b2b]" /></Link></div>
-            <div className="mt-7 grid max-w-lg grid-cols-3 gap-3 border-t border-[#d9d2c8] pt-4 text-xs text-[#5d6870]"><span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#d94b2b]" />Siaya Town</span><span className="flex items-center gap-2"><Package className="h-4 w-4 text-[#a35a2b]" />Delivery available</span><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#28766b]" />Approve first</span></div>
+            <div className="mt-7 grid max-w-lg grid-cols-3 gap-3 border-t border-[#d9d2c8] pt-4 text-xs text-[#5d6870]"><span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#d94b2b]" />Siaya Town</span><span className="flex items-center gap-2"><Package className="h-4 w-4 text-[#a35a2b]" />Ask about delivery</span><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#28766b]" />Approve first</span></div>
           </div>
           <div className="relative overflow-hidden rounded-[1.75rem] bg-[#202a30] shadow-2xl shadow-[#202a30]/20">
             <img src="/brand/dph-service-desk-portrait.webp" alt="Digital Phone Hub service desk in Siaya" className="h-[27rem] w-full object-cover object-[center_58%] sm:h-[34rem] lg:h-[31rem]" />

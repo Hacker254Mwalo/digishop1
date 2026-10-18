@@ -3,7 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, publicProcedure, router } from "./_core/trpc";
-import { clearOwnerSession, setOwnerSession, signInOwner } from "./_core/ownerAuth";
+import { logoutOwner, setOwnerSession, signInOwner } from "./_core/ownerAuth";
 import {
   addRepairNote,
   createOrderRequest,
@@ -11,6 +11,8 @@ import {
   getDashboardSummary,
   getRepairHistory,
   getRepairStatus,
+  listAdminProducts,
+  listCustomers,
   listOrderRequests,
   listProducts,
   listRepairTickets,
@@ -21,6 +23,7 @@ import {
   updateRepairTicket,
   upsertProduct,
   removeProduct,
+  setProductActive,
   uploadProductImage,
 } from "./db";
 import { adminCopilot, productAdvisor, repairHelper } from "./ai";
@@ -40,19 +43,40 @@ const deviceInput = z.object({
   notes: z.string().trim().max(2000).optional(),
 });
 
+const orderRequestInput = z.object({
+  submissionId: z.string().regex(/^[A-F0-9]{24}$/i).transform(value => value.toUpperCase()).optional(),
+  customer: customerInput,
+  fulfillment: z.enum(["delivery", "collection"]),
+  deliveryLocation: z.string().trim().max(180).optional(),
+  notes: z.string().trim().max(2000).optional(),
+  items: z.array(z.object({
+    productId: z.number().int().positive().optional(),
+    productName: z.string().trim().min(1).max(180),
+    quantity: z.number().int().positive().max(20),
+    // This is retained only for compatibility with existing clients. The server
+    // always looks up catalogue prices itself and never trusts this value.
+    unitPrice: z.number().int().nonnegative().optional(),
+  })).min(1).max(40),
+}).superRefine((value, ctx) => {
+  if (value.fulfillment === "delivery" && !value.deliveryLocation?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["deliveryLocation"], message: "A delivery town or area is required." });
+  }
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     ownerLogin: publicProcedure.input(z.object({ email: z.string().email(), password: z.string().min(8).max(200) })).mutation(async ({ ctx, input }) => {
-      const { user, accessToken } = await signInOwner(input.email, input.password);
-      setOwnerSession(ctx.res, accessToken);
+      const { user, accessToken, expiresAt } = await signInOwner(input.email, input.password);
+      setOwnerSession(ctx.res, accessToken, expiresAt);
       return { id: user.id, email: user.email };
     }),
-    logout: publicProcedure.mutation(({ ctx }) => {
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+      const ownerLogout = logoutOwner(ctx.req, ctx.res);
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      if ((ctx.req.headers.cookie ?? "").includes("dph-owner-session=")) clearOwnerSession(ctx.res);
+      await ownerLogout;
       return { success: true } as const;
     }),
   }),
@@ -60,15 +84,16 @@ export const appRouter = router({
     products: publicProcedure.query(() => listProducts()),
     repairHelper: publicProcedure.input(z.object({ deviceType: z.enum(["phone", "laptop", "electronics"]), brand: z.string().trim().min(1).max(100), model: z.string().trim().min(1).max(160), issue: z.string().trim().min(5).max(2000) })).mutation(({ input }) => repairHelper(input)),
     productAdvisor: publicProcedure.input(z.object({ query: z.string().trim().min(3).max(500) })).mutation(({ input }) => productAdvisor(input.query)),
-    createRepairRequest: publicProcedure.input(z.object({ customer: customerInput, device: deviceInput, issue: z.string().trim().min(5).max(4000), priority: z.enum(["low", "normal", "high", "urgent"]).optional() })).mutation(({ input }) => createRepairRequest(input)),
-    createOrderRequest: publicProcedure.input(z.object({ customer: customerInput, fulfillment: z.enum(["delivery", "collection"]), deliveryLocation: z.string().trim().max(180).optional(), notes: z.string().trim().max(2000).optional(), items: z.array(z.object({ productId: z.number().int().positive().optional(), productName: z.string().trim().min(1).max(180), quantity: z.number().int().positive().max(20), unitPrice: z.number().int().nonnegative() })).min(1).max(40) })).mutation(({ input }) => createOrderRequest(input)),
-    getRepairStatus: publicProcedure.input(z.object({ reference: z.string().trim().min(6).max(32) })).query(({ input }) => getRepairStatus(input.reference)),
+    createRepairRequest: publicProcedure.input(z.object({ submissionId: z.string().regex(/^[A-F0-9]{24}$/i).transform(value => value.toUpperCase()).optional(), customer: customerInput, device: deviceInput, issue: z.string().trim().min(5).max(4000), priority: z.enum(["low", "normal", "high", "urgent"]).optional() })).mutation(({ input }) => createRepairRequest(input)),
+    createOrderRequest: publicProcedure.input(orderRequestInput).mutation(({ input }) => createOrderRequest(input)),
+    getRepairStatus: publicProcedure.input(z.object({ reference: z.string().trim().toUpperCase().min(10).max(32).regex(/^DPH-REP-[A-Z0-9]{1,24}$/, "Enter a valid repair reference.") })).query(({ input }) => getRepairStatus(input.reference)),
   }),
   admin: router({
     summary: adminProcedure.query(() => getDashboardSummary()),
     repairs: adminProcedure.query(() => listRepairTickets()),
     customerHistory: adminProcedure.input(z.object({ customerId: z.number().int().positive(), deviceId: z.number().int().positive() })).query(({ input }) => getRepairHistory(input)),
-    products: adminProcedure.query(() => listProducts()),
+    customers: adminProcedure.query(() => listCustomers()),
+    products: adminProcedure.query(() => listAdminProducts()),
     orders: adminProcedure.query(() => listOrderRequests()),
     technicians: adminProcedure.query(() => listTechnicians()),
     allTechnicians: adminProcedure.query(() => listAllTechnicians()),
@@ -78,6 +103,7 @@ export const appRouter = router({
     upsertProduct: adminProcedure.input(z.object({ id: z.number().int().positive().optional(), sku: z.string().trim().min(1).max(80), name: z.string().trim().min(2).max(180), category: z.enum(["phone_screen", "charging_port", "battery", "laptop_spare", "accessory", "other"]), productType: z.enum(["part", "device", "accessory", "service"]).optional(), description: z.string().trim().max(2000).optional(), compatibility: z.string().trim().max(2000).optional(), imageUrl: z.string().url().max(512).optional(), externalUrl: z.string().url().max(512).optional(), price: z.number().int().nonnegative(), stock: z.number().int().nonnegative(), reorderLevel: z.number().int().nonnegative().optional(), availability: z.enum(["in_stock", "low_stock", "out_of_stock", "by_order"]).optional() })).mutation(({ input }) => upsertProduct(input)),
     uploadProductImage: adminProcedure.input(z.object({ id: z.number().int().positive(), fileName: z.string().trim().min(1).max(180), mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]), base64: z.string().min(100).max(8500000) })).mutation(({ input }) => uploadProductImage(input)),
     removeProduct: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => removeProduct(input)),
+    setProductActive: adminProcedure.input(z.object({ id: z.number().int().positive(), active: z.boolean() })).mutation(({ input }) => setProductActive(input)),
     updateOrder: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["new", "confirmed", "fulfilled", "cancelled"]) })).mutation(({ input }) => updateOrderStatus(input)),
     copilot: adminProcedure.input(z.object({ question: z.string().trim().min(3).max(600) })).mutation(({ input }) => adminCopilot(input.question)),
   }),

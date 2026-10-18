@@ -108,11 +108,11 @@ const configs: Record<string, SeoConfig> = {
 
 function getConfig(pathname: string): SeoConfig {
   return configs[pathname] ?? {
-    title: "Digital Phone Hub | Repair & Electronics",
-    description: "Digital Phone Hub provides phone, laptop and electronics repair in Siaya, with spare parts and accessories available across Kenya.",
-    keywords: "phone repair Siaya, laptop repair Siaya, phone parts Kenya, Digital Phone Hub",
-    canonical: `${SITE_URL}${pathname || "/"}`,
-    robots: "noindex,follow",
+    title: "Page not found | Digital Phone Hub",
+    description: "This page is not available. Visit Digital Phone Hub's repair and parts pages or call the Siaya service desk.",
+    keywords: "Digital Phone Hub, Siaya repair, page not found",
+    canonical: "",
+    robots: "noindex,nofollow",
     type: "website",
   };
 }
@@ -129,6 +129,10 @@ function upsertMeta(selector: string, attributes: Record<string, string>, conten
 
 function upsertLink(rel: string, href: string) {
   let element = document.head.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
+  if (!href) {
+    element?.remove();
+    return;
+  }
   if (!element) {
     element = document.createElement("link");
     element.setAttribute("rel", rel);
@@ -141,7 +145,9 @@ export default function SeoHead() {
   const [location] = useLocation();
 
   useEffect(() => {
-    const config = getConfig(location.split("?")[0] || "/");
+    const pathname = location.split("?")[0] || "/";
+    const config = getConfig(pathname);
+    const socialUrl = config.canonical || `${SITE_URL}${pathname}`;
     document.title = config.title;
     upsertMeta('meta[name="description"]', { name: "description" }, config.description);
     upsertMeta('meta[name="keywords"]', { name: "keywords" }, config.keywords);
@@ -149,7 +155,7 @@ export default function SeoHead() {
     upsertMeta('meta[property="og:title"]', { property: "og:title" }, config.title);
     upsertMeta('meta[property="og:description"]', { property: "og:description" }, config.description);
     upsertMeta('meta[property="og:type"]', { property: "og:type" }, config.type === "service" ? "website" : config.type);
-    upsertMeta('meta[property="og:url"]', { property: "og:url" }, config.canonical);
+    upsertMeta('meta[property="og:url"]', { property: "og:url" }, socialUrl);
     upsertMeta('meta[property="og:site_name"]', { property: "og:site_name" }, "Digital Phone Hub");
     upsertMeta('meta[property="og:image"]', { property: "og:image" }, `${SITE_URL}/brand/dph-storefront-sign-wide.webp`);
     upsertMeta('meta[name="twitter:card"]', { name: "twitter:card" }, "summary_large_image");

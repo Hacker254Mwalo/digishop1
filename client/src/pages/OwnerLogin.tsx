@@ -7,7 +7,7 @@ import { useLocation } from "wouter";
 
 export default function OwnerLogin() {
   const [, navigate] = useLocation();
-  const [email, setEmail] = useState("codeshuzaifa@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const utils = trpc.useUtils();
