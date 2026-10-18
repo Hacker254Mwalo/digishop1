@@ -7,7 +7,7 @@
 - [x] Replaced predictable timestamp-based public repair/order references with random, retry-safe request IDs. Public repair tracking now returns only reference, status and update time.
 - [x] Kept the repair form's `electronics` category compatible with the deployed DB constraint by storing `other` plus the selected category in notes; no unverified migration was assumed.
 - [x] Required an area for delivery requests; revalidated active catalogue products and quantities server-side; treated any unpriced line as a quote/availability request rather than a zero-KES sale.
-- [x] Added per-tab basket persistence, stale-item protection, clear quote-vs-order wording and stable submission retries.
+- [x] Added per-tab basket persistence, stale-item protection, clear quote-vs-order wording and stable submission retries; the empty basket now shows “No items selected yet” rather than a KES 0 estimate.
 - [x] Added an owner-only contact-record directory (not customer sign-in accounts); included inactive items in owner inventory; added reversible publish/hide controls.
 - [x] Made owner mutations check for missing rows, kept product edit forms open until save confirmation, improved whole-KES quote validation and removed static “live/ready” promises.
 - [x] Matched owner-session cookie lifetime to Supabase token expiry; clear the owner cookie on logout and attempt provider-side session revocation. Removed the visible default owner email.
@@ -17,17 +17,17 @@
 
 ## Release and live verification
 
-- [ ] Review and commit the tested changes on `main`.
-- [ ] Push the authorized release and verify its Vercel deployment.
-- [ ] Recheck public routes, route metadata, sitemap and unknown-route HTTP status on the live site after deployment.
-- [ ] Do not submit a production repair request, parts order, payment or owner mutation during QA.
+- [x] Committed the tested changes to `main` (`d4dae56`; live-QA refinement `7523ef5`).
+- [x] Pushed the release; Vercel confirmed the final production deployment for `7523ef5a6314afccb81d4aafc497e4b22b76666d`.
+- [x] Checked live public routes, route metadata, sitemap, robots and unknown-route HTTP 404; the rendered homepage, repair intake and catalogue loaded without browser-console output.
+- [x] No production customer request, payment or owner mutation was created during QA. The empty repair form was clicked with required fields blank; no customer data was entered.
 
 ## Owner decisions and real data still needed — no mock flows
 
 - [ ] **Payments:** choose a merchant provider (Safaricom Daraja, Paystack or Pesapal) and authorize/configure its sandbox/live credentials and callback settings through the approved secret process. There is no payment checkout or “paid” state until this exists.
 - [ ] **Customer registration/login:** choose a verified identity channel (for example, phone OTP or email), recovery flow and actual customer-account requirements. Existing customer entries are guest-service contact records, not login accounts.
 - [ ] **Customer notifications:** choose and configure an authorized email/SMS/WhatsApp API provider and approve which customer events should be sent. Current integration is owner-facing; it does not send customer confirmations.
-- [ ] **Catalogue:** add accurate product names, real photos, model compatibility, KES prices, stock and availability in the owner portal. The live catalogue currently has no verifiable model-specific listings/prices, so none were invented.
+- [ ] **Catalogue:** add accurate product names, real photos, model compatibility, KES prices, stock and availability in the owner portal. The live public-products API currently returns an empty list; the site shows an honest empty state rather than inventing stock.
 - [ ] **Local trust:** verify the exact customer-facing street address/landmark, hours, service/delivery area and warranty terms. Confirm the actual Google Business Profile and only then add its real review URL.
 
 ## Remaining longer-term work (not completed)
