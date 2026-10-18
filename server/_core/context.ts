@@ -3,11 +3,13 @@ import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
 import { getOwnerFromRequest } from "./ownerAuth";
 import { getUserByOpenId, upsertUser } from "../db";
+import { getVerifiedCustomerFromRequest, type VerifiedCustomer } from "./customerAuth";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  customer: VerifiedCustomer | null;
 };
 
 export async function createContext(
@@ -41,9 +43,12 @@ export async function createContext(
     }
   }
 
+  const customer = await getVerifiedCustomerFromRequest(opts.req);
+
   return {
     req: opts.req,
     res: opts.res,
     user,
+    customer,
   };
 }

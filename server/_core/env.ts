@@ -13,6 +13,7 @@ export const ENV = {
   supabaseUrl: process.env.SUPABASE_URL ?? "",
   supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY ?? "",
   supabaseSecretKey: process.env.SUPABASE_SECRET_KEY ?? "",
+  customerAccountsEnabled: process.env.CUSTOMER_ACCOUNTS_ENABLED === "true",
   supabaseJwksUrl: process.env.SUPABASE_JWKS_URL ?? "",
   mpesaDarajaEnvironment: process.env.MPESA_DARAJA_ENV ?? "",
   mpesaDarajaConsumerKey: process.env.MPESA_DARAJA_CONSUMER_KEY ?? "",

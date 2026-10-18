@@ -19,6 +19,7 @@ const RepairStatus = lazy(() => import("./pages/RepairStatus"));
 const SpareParts = lazy(() => import("./pages/SpareParts"));
 const OrderStatus = lazy(() => import("./pages/OrderStatus"));
 const PhoneRepairSiaya = lazy(() => import("./pages/PhoneRepairSiaya"));
+const Account = lazy(() => import("./pages/Account"));
 
 function AdminRoute() {
   const { user, loading } = useAuth();
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/repair-status" component={RepairStatus} />
       <Route path="/spares" component={SpareParts} />
       <Route path="/order-status" component={OrderStatus} />
+      <Route path="/account" component={Account} />
       <Route path="/phone-repair-siaya" component={PhoneRepairSiaya} />
       <Route path="/owner-login" component={OwnerLogin} />
       <Route path="/admin" component={AdminRoute} />

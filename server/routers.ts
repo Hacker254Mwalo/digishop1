@@ -1,13 +1,17 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
+import { normalizeKenyanMpesaPhone } from "@shared/phone";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { adminProcedure, publicProcedure, router } from "./_core/trpc";
+import { adminProcedure, customerProcedure, publicProcedure, router } from "./_core/trpc";
 import { logoutOwner, setOwnerSession, signInOwner } from "./_core/ownerAuth";
 import {
   addRepairNote,
   createOrderRequest,
   createRepairRequest,
+  CustomerAccountConflictError,
+  getCustomerAccount,
   getDashboardSummary,
   getRepairHistory,
   getRepairStatus,
@@ -18,12 +22,14 @@ import {
   listRepairTickets,
   listTechnicians,
   listAllTechnicians,
+  listCustomerOrders,
   updateOrderStatus,
   upsertTechnician,
   updateRepairTicket,
   upsertProduct,
   removeProduct,
   setProductActive,
+  saveCustomerAccount,
   uploadProductImage,
 } from "./db";
 import { adminCopilot, productAdvisor, repairHelper } from "./ai";
@@ -81,12 +87,56 @@ export const appRouter = router({
       return { success: true } as const;
     }),
   }),
+  customer: router({
+    me: customerProcedure.query(async ({ ctx }) => {
+      const account = await getCustomerAccount(ctx.customer.id, ctx.customer.phone);
+      return account ? { username: account.username, phone: account.phone } : null;
+    }),
+    register: customerProcedure.input(z.object({
+      username: z.string().trim().min(3).max(24).regex(/^[a-zA-Z0-9_]+$/).transform(value => value.toLowerCase()),
+    })).mutation(async ({ ctx, input }) => {
+      try {
+        const account = await saveCustomerAccount({ userId: ctx.customer.id, phone: ctx.customer.phone, username: input.username });
+        return { username: account.username, phone: account.phone };
+      } catch (error) {
+        if (error instanceof CustomerAccountConflictError) {
+          throw new TRPCError({ code: "CONFLICT", message: error.message });
+        }
+        throw error;
+      }
+    }),
+    orders: customerProcedure.query(({ ctx }) => listCustomerOrders(ctx.customer.id)),
+  }),
   public: router({
     products: publicProcedure.query(() => listProducts()),
+    currentCustomer: publicProcedure.query(async ({ ctx }) => {
+      if (!ctx.customer) return null;
+      try {
+        const account = await getCustomerAccount(ctx.customer.id, ctx.customer.phone);
+        return account ? { username: account.username, phone: account.phone } : null;
+      } catch {
+        // Account storage is optional; a missing account migration must not
+        // interrupt the public guest request flow.
+        return null;
+      }
+    }),
     repairHelper: publicProcedure.input(z.object({ deviceType: z.enum(["phone", "laptop", "electronics"]), brand: z.string().trim().min(1).max(100), model: z.string().trim().min(1).max(160), issue: z.string().trim().min(5).max(2000) })).mutation(({ input }) => repairHelper(input)),
     productAdvisor: publicProcedure.input(z.object({ query: z.string().trim().min(3).max(500) })).mutation(({ input }) => productAdvisor(input.query)),
     createRepairRequest: publicProcedure.input(z.object({ submissionId: z.string().regex(/^[A-F0-9]{24}$/i).transform(value => value.toUpperCase()).optional(), customer: customerInput, device: deviceInput, issue: z.string().trim().min(5).max(4000), priority: z.enum(["low", "normal", "high", "urgent"]).optional() })).mutation(({ input }) => createRepairRequest(input)),
-    createOrderRequest: publicProcedure.input(orderRequestInput).mutation(({ input }) => createOrderRequest(input)),
+    createOrderRequest: publicProcedure.input(orderRequestInput).mutation(async ({ ctx, input }) => {
+      let accountUserId: string | undefined;
+      if (ctx.customer) {
+        try {
+          const account = await getCustomerAccount(ctx.customer.id, ctx.customer.phone);
+          if (account && normalizeKenyanMpesaPhone(input.customer.phone) === account.phone) {
+            accountUserId = account.userId;
+          }
+        } catch {
+          // If optional account storage is not installed, preserve guest checkout.
+        }
+      }
+      return createOrderRequest(input, accountUserId);
+    }),
     getRepairStatus: publicProcedure.input(z.object({ reference: z.string().trim().toUpperCase().min(10).max(32).regex(/^DPH-REP-[A-Z0-9]{1,24}$/, "Enter a valid repair reference.") })).query(({ input }) => getRepairStatus(input.reference)),
     getOrderPaymentStatus: publicProcedure.input(z.object({ reference: z.string().trim().toUpperCase().regex(/^DPH-ORD-[A-F0-9]{24}$/, "Enter a valid order reference.") })).query(({ input }) => getGuestOrderPaymentStatus(input.reference)),
     startOrderPayment: publicProcedure.input(z.object({ reference: z.string().trim().toUpperCase().regex(/^DPH-ORD-[A-F0-9]{24}$/, "Enter a valid order reference."), idempotencyKey: z.string().regex(/^[A-F0-9]{24}$/i).transform(value => value.toUpperCase()) }).strict()).mutation(({ input }) => startGuestOrderPayment(input)),

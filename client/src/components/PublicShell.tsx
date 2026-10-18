@@ -7,6 +7,7 @@ const navItems = [
   { href: "/repair", label: "Repair services" },
   { href: "/repair-status", label: "Track my repair" },
   { href: "/spares", label: "Parts & accessories" },
+  { href: "/account", label: "My account" },
 ];
 
 const phoneHref = "tel:+254718114009";
@@ -89,7 +90,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
           </div>
           <div className="mt-10 grid gap-8 sm:grid-cols-3">
             <div><Link href="/" className="inline-flex rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><BrandMark compact /></Link><p className="mt-4 max-w-sm text-sm leading-6 text-[#d0d8da]">Local phone, laptop and electronics care from Digital Phone Hub in Siaya Town.</p></div>
-            <div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-[#f6c36a]">Customer care</p><div className="mt-4 grid gap-3 text-sm text-[#e0e5e6]"><Link className="transition hover:text-white" href="/repair">Book a repair</Link><Link className="transition hover:text-white" href="/repair-status">Track a repair</Link><Link className="transition hover:text-white" href="/spares">Ask about parts</Link></div></div>
+            <div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-[#f6c36a]">Customer care</p><div className="mt-4 grid gap-3 text-sm text-[#e0e5e6]"><Link className="transition hover:text-white" href="/repair">Book a repair</Link><Link className="transition hover:text-white" href="/repair-status">Track a repair</Link><Link className="transition hover:text-white" href="/spares">Ask about parts</Link><Link className="transition hover:text-white" href="/account">Optional customer account</Link></div></div>
             <div><p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-[#f6c36a]">Service desk</p><div className="mt-4 grid gap-3 text-sm text-[#e0e5e6]"><span>Siaya Town, Siaya County</span><a className="transition hover:text-white" href={phoneHref}>0718 114 009</a><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#79d5c4]" />Approval before repair</span></div></div>
           </div>
         </div>

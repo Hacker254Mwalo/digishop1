@@ -1,40 +1,33 @@
 # Digital Phone Hub — release TODO
 
-## Implemented in this release candidate
+## Completed and verified in the prior production release
 
-- [x] Consolidated customer-facing pages around the existing brand mark and real shop imagery; corrected contrast, keyboard focus, mobile navigation, zoom, skip links and fixed-action-rail clearance.
-- [x] Unified the Siaya phone-repair page with the storefront without inventing credentials, prices or warranties.
-- [x] Replaced predictable timestamp-based public repair/order references with random, retry-safe request IDs. Public repair tracking now returns only reference, status and update time.
-- [x] Kept the repair form's `electronics` category compatible with the deployed DB constraint by storing `other` plus the selected category in notes; no unverified migration was assumed.
-- [x] Required an area for delivery requests; revalidated active catalogue products and quantities server-side; treated any unpriced line as a quote/availability request rather than a zero-KES sale.
-- [x] Added per-tab basket persistence, stale-item protection, clear quote-vs-order wording and stable submission retries; the empty basket now shows “No items selected yet” rather than a KES 0 estimate.
-- [x] Added an owner-only contact-record directory (not customer sign-in accounts); included inactive items in owner inventory; added reversible publish/hide controls.
-- [x] Made owner mutations check for missing rows, kept product edit forms open until save confirmation, improved whole-KES quote validation and removed static “live/ready” promises.
-- [x] Matched owner-session cookie lifetime to Supabase token expiry; clear the owner cookie on logout and attempt provider-side session revocation. Removed the visible default owner email.
-- [x] Added a branded build-time 404 output and Vercel unmatched-route handling while retaining API/storage routes; private tracking/owner pages are `noindex`.
-- [x] Added the requested review/trust playbook and reusable senior product/engineering prompt under `docs/`.
-- [x] Passed TypeScript checks, 21 automated tests and the production build; inspected production-build screenshots at desktop and 390px phone width, including guest order/payment status.
+- [x] Rebuilt the public storefront around the shop's existing brand and photography; improved responsive layouts, contrast, focus, skip navigation and zoom support.
+- [x] Preserved guest repair booking, parts requests and item-order tracking; added retry-safe high-entropy references and removed bearer references from URLs and prefilled customer WhatsApp links.
+- [x] Kept repair/order status pages private from search, referrers and caches; added route-specific prerendered SEO and a branded 404.
+- [x] Improved the owner portal's inventory visibility controls, customer contact directory, validation and mutation feedback.
+- [x] Integrated real Daraja STK initiation and provider-query reconciliation code with database-level payment safeguards. It fails closed until merchant credentials and the full payment migration are configured; Production rejects sandbox mode.
+- [x] Deployed and verified the order-status and repair-status routes in production. No real customer order or M-PESA prompt was created during QA.
 
-## Release and live verification
+## Optional customer login and sign-up — current follow-up
 
-- [x] Committed the tested changes to `main` (`d4dae56`; live-QA refinement `7523ef5`).
-- [x] Pushed the release; Vercel confirmed the final production deployment for `7523ef5a6314afccb81d4aafc497e4b22b76666d`.
-- [x] Checked live public routes, route metadata, sitemap, robots and unknown-route HTTP 404; the rendered homepage, repair intake and catalogue loaded without browser-console output.
-- [x] No production customer request, payment or owner mutation was created during QA. The empty repair form was clicked with required fields blank; no customer data was entered.
-- [ ] Commit and deploy the new guest Daraja checkout, order-status route and payment safeguards; the previously verified live site does not yet contain this follow-up work.
-- [ ] After deployment, verify `/order-status` is live, noindex and has no console errors; use only a random nonexistent reference and do not send an STK request.
+- [x] Implemented `/account` with a username and Kenyan phone number, real Supabase Auth SMS one-time-code sign-up/sign-in, and a separate customer session that does not alter owner/admin login.
+- [x] Implemented private account profile and account-linked item-request history. Only server-verified, phone-confirmed Supabase identities can use customer account procedures.
+- [x] Kept guest purchase/request flows optional. New requests link only when the submitted number matches the verified account phone; older guest requests are never auto-claimed. If account storage is missing, the order request falls back to guest mode.
+- [x] Added an additive migration, private route headers/metadata, regression coverage and [`customer-account-setup.md`](docs/customer-account-setup.md).
+- [ ] Commit and push this account follow-up, deploy it, and verify `/account` and its noindex/no-store protections in production. Do not initiate SMS during live route QA.
+- [ ] Before enabling customer OTP in production, apply `supabase/migrations/003_customer_accounts.sql`, configure a real Supabase Auth phone/SMS provider, set `CUSTOMER_ACCOUNTS_ENABLED=true` only on an isolated Vercel Preview/Supabase project, and verify the complete flow there. Keep the Production flag disabled until Preview passes and the owner approves activation. No simulated OTP may be presented as production authentication.
 
-## Owner decisions and real data still needed — no mock flows
+## Owner prerequisites and remaining operational work
 
-- [x] **Daraja guest-checkout code:** initiate STK only for an owner-confirmed positively priced order; use server-side order total/phone; persist idempotent attempts; reconcile callback ID, amount, phone and order total with a Daraja status query before marking paid; rate-limit retries and prevent closing orders during unresolved payment.
-- [ ] **Payment activation:** apply the payment table migration, configure Daraja merchant credentials, shortcode, passkey, transaction type, environment and callback in Vercel, then test in sandbox. No M-PESA prompt or paid state is enabled without these prerequisites.
-- [x] **Guest access and messages:** purchasing does not require customer registration. Current real follow-up is manual call/WhatsApp; no automated customer SMS/email/WhatsApp delivery is claimed.
-- [ ] **Catalogue:** add accurate product names, real photos, model compatibility, KES prices, stock and availability in the owner portal. The live public-products API currently returns an empty list; the site shows an honest empty state rather than inventing stock.
-- [ ] **Local trust:** verify the exact customer-facing street address/landmark, hours, service/delivery area and warranty terms. Confirm the actual Google Business Profile and only then add its real review URL.
+- [ ] **M-PESA activation:** follow [`daraja-setup.md`](docs/daraja-setup.md); apply the complete payment migration, configure the approved Daraja merchant credentials and exact callback in Vercel, verify the database readiness RPC, and test sandbox only in a separate Preview/database. No production STK prompt is enabled without these prerequisites.
+- [ ] **Inventory:** enter real product names, images, compatibility, KES prices, stock and availability. The catalogue must remain honest/quote-oriented until the owner supplies verified data.
+- [ ] **Local trust:** confirm the exact address/landmark, hours, service area, delivery terms and warranty. Verify the actual Google Business Profile and add only its real review URL.
+- [ ] **Measurement:** connect Search Console and, if desired, a legitimate analytics property. No ranking or conversion lift is claimed without measurement.
+- [ ] **Customer notifications:** follow-up remains manual via call/WhatsApp; choose an approved messaging provider and consent/event policy before implementing automated notifications.
 
-## Remaining longer-term work (not completed)
+## Longer-term engineering
 
-- [ ] Derive the full static route output from the same source as hydrated React or adopt true SSR. Current crawler output is a useful first-response summary, not a full React server render.
-- [ ] Paginate/filter large owner record lists and define reporting metrics from reliable orders/payments before offering sales/revenue analytics.
-- [ ] Test account verification, payment callbacks, customer notifications and owner login using authorized sandbox credentials, then perform a safe production smoke test.
-- [ ] Monitor Search Console / verified Business Profile performance. The site cannot guarantee a #1 local result; relevance, distance and prominence also matter.
+- [ ] Derive crawler-visible route output from the same source as hydrated React or adopt true SSR; current prerender is an independently maintained summary.
+- [ ] Paginate/filter large owner lists and define reporting metrics from reliable completed orders/payments before presenting sales analytics.
+- [ ] Continue live QA with authorized Preview identities and test data; do not create a production customer request or payment as a smoke test.

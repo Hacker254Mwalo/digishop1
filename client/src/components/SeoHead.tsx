@@ -96,6 +96,14 @@ const configs: Record<string, SeoConfig> = {
     robots: "noindex,nofollow",
     type: "website",
   },
+  "/account": {
+    title: "Customer Account | Digital Phone Hub",
+    description: "Private Digital Phone Hub customer sign-in and order history.",
+    keywords: "Digital Phone Hub customer account, private order history",
+    canonical: "",
+    robots: "noindex,nofollow",
+    type: "website",
+  },
   "/owner-login": {
     title: "Owner Login | Digital Phone Hub",
     description: "Private Digital Phone Hub owner access.",

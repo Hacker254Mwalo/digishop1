@@ -46,16 +46,22 @@ function canRequestFromListing(product: Product) { return !product.externalUrl &
 
 export default function SpareParts() {
   const products = trpc.public.products.useQuery();
+  const currentCustomer = trpc.public.currentCustomer.useQuery(undefined, { retry: false });
   const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Record<number, number>>(readSavedBasket);
   const [form, setForm] = useState({ name: "", phone: "", email: "", location: "", model: "", customPart: "", notes: "", fulfillment: "delivery" as "delivery" | "collection" });
   const [submitted, setSubmitted] = useState<string | null>(() => typeof window !== "undefined" ? readSavedReference(resultStorageKey) : null);
+  const [submittedAccountLinked, setSubmittedAccountLinked] = useState(false);
   const [submissionId, setSubmissionId] = useState(() => typeof window !== "undefined" ? getOrCreateSubmissionId(submissionStorageKey) : "");
-  const mutation = trpc.public.createOrderRequest.useMutation({ onSuccess: result => { saveReference(resultStorageKey, result.reference); setSubmitted(result.reference); setSelected({}); } });
+  const mutation = trpc.public.createOrderRequest.useMutation({ onSuccess: result => { saveReference(resultStorageKey, result.reference); setSubmitted(result.reference); setSubmittedAccountLinked(result.accountLinked); setSelected({}); } });
   const update = (key: string, value: string) => setForm(current => ({ ...current, [key]: value }));
   const allProducts = (products.data ?? []) as Product[];
   useEffect(() => { try { sessionStorage.setItem(basketStorageKey, JSON.stringify(selected)); } catch { /* Session storage may be unavailable in private browsing. */ } }, [selected]);
+  useEffect(() => {
+    if (!currentCustomer.data || form.phone) return;
+    setForm(current => ({ ...current, phone: `+${currentCustomer.data!.phone}` }));
+  }, [currentCustomer.data, form.phone]);
   const filteredProducts = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("en-KE");
     return allProducts.filter(product => {
@@ -110,6 +116,7 @@ export default function SpareParts() {
     setSelected({});
     setForm({ name: "", phone: "", email: "", location: "", model: "", customPart: "", notes: "", fulfillment: "delivery" });
     setSubmitted(null);
+    setSubmittedAccountLinked(false);
     mutation.reset();
   };
 
@@ -121,7 +128,7 @@ export default function SpareParts() {
           <p className="mt-6 text-[10px] font-extrabold uppercase tracking-[.2em] text-[#205c52]">Request saved</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-.04em] text-[#202a30] sm:text-4xl">The parts desk has your enquiry.</h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[#56636a]">This is an availability/order request, not a completed purchase. No payment was taken. The desk needs to confirm stock, compatibility, final price and fulfilment before you decide.</p>
-          <div className="mx-auto mt-6 max-w-md rounded-xl border border-[#d9d2c8] bg-[#f6f3ee] p-5"><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#69747b]">Request reference</p><p className="mt-2 break-all font-mono text-xl font-black text-[#a93823]">{submitted}</p><p className="mt-2 text-xs leading-5 text-[#69747b]">Keep this reference private. Anyone who has it can check the order stage and request a payment prompt to the phone saved on the order. Use it when contacting the service desk.</p></div>
+          <div className="mx-auto mt-6 max-w-md rounded-xl border border-[#d9d2c8] bg-[#f6f3ee] p-5"><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#69747b]">Request reference</p><p className="mt-2 break-all font-mono text-xl font-black text-[#a93823]">{submitted}</p><p className="mt-2 text-xs leading-5 text-[#69747b]">Keep this reference private. Anyone who has it can check the order stage and request a payment prompt to the phone saved on the order. Use it when contacting the service desk.</p><p className="mt-3 border-t border-[#d9d2c8] pt-3 text-xs leading-5 text-[#46535a]">{submittedAccountLinked ? "This request is linked to your signed-in customer account." : "This request is saved as a guest request and will not appear in account history."}</p></div>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row"><Link href="/order-status" onClick={() => { try { window.sessionStorage.setItem("dph-order-status-reference", submitted); } catch { /* The customer can enter the reference manually. */ } }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#205c52] px-5 py-3 text-sm font-extrabold text-white">Check order status &amp; payment <ArrowRight className="h-4 w-4" /></Link><a href={`https://wa.me/254718114009?text=${encodeURIComponent(`Hello Digital Phone Hub, I am following up on a parts request. I can provide my reference.`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#cfc5b8] px-5 py-3 text-sm font-extrabold text-[#202a30]">Ask the desk on WhatsApp <ArrowRight className="h-4 w-4" /></a><Link href="/" className="inline-flex items-center justify-center rounded-xl border border-[#cfc5b8] px-5 py-3 text-sm font-extrabold text-[#202a30]">Back to the shop</Link></div>
           <button type="button" onClick={startAnotherRequest} className="mt-5 text-sm font-bold text-[#a93823] underline-offset-4 hover:underline">Start another parts request</button>
         </section>

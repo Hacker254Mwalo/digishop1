@@ -20,6 +20,14 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+export const customerAccounts = mysqlTable("customerAccounts", {
+  userId: varchar("userId", { length: 36 }).primaryKey(),
+  username: varchar("username", { length: 24 }).notNull(),
+  phone: varchar("phone", { length: 12 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 export const customers = mysqlTable("customers", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 160 }).notNull(),
@@ -100,6 +108,7 @@ export const orderRequests = mysqlTable("orderRequests", {
   id: int("id").autoincrement().primaryKey(),
   reference: varchar("reference", { length: 32 }).notNull().unique(),
   customerId: int("customerId").notNull(),
+  accountUserId: varchar("accountUserId", { length: 36 }),
   status: mysqlEnum("status", ["new", "confirmed", "fulfilled", "cancelled"]).default("new").notNull(),
   fulfillment: mysqlEnum("fulfillment", ["delivery", "collection"]).notNull(),
   deliveryLocation: varchar("deliveryLocation", { length: 180 }),
@@ -138,6 +147,7 @@ export const paymentAttempts = mysqlTable("paymentAttempts", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+export type CustomerAccount = typeof customerAccounts.$inferSelect;
 export type Customer = typeof customers.$inferSelect;
 export type Device = typeof devices.$inferSelect;
 export type RepairTicket = typeof repairTickets.$inferSelect;

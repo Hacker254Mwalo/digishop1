@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ENV } from "./_core/env";
 import { storagePut } from "./storage";
+import { normalizeKenyanMpesaPhone } from "@shared/phone";
 
 type CustomerInput = { name: string; phone: string; email?: string; location?: string };
 type DeviceInput = { type: "phone" | "laptop" | "tablet" | "electronics" | "other"; brand: string; model: string; serialNumber?: string; notes?: string };
@@ -15,6 +16,20 @@ export async function getDb() {
     });
   }
   return _db;
+}
+
+export async function isCustomerAccountSchemaReady(): Promise<boolean> {
+  try {
+    const db = await getDb();
+    if (!db) return false;
+    const [accounts, orders] = await Promise.all([
+      db.from("customerAccounts").select("userId,username,phone,createdAt").limit(0),
+      db.from("orderRequests").select("accountUserId").limit(0),
+    ]);
+    return !accounts.error && !orders.error;
+  } catch {
+    return false;
+  }
 }
 
 async function requireDb() {
@@ -45,6 +60,8 @@ async function many(request: PromiseLike<{ data: any[] | null; error: { message:
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+export class CustomerAccountConflictError extends Error {}
 
 export async function upsertUser(user: { openId: string; name?: string | null; email?: string | null; loginMethod?: string | null; role?: "user" | "admin"; lastSignedIn?: Date }): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
@@ -95,14 +112,15 @@ export async function createRepairRequest(input: { customer: CustomerInput; devi
   }
 }
 
-export async function createOrderRequest(input: { customer: CustomerInput; fulfillment: "delivery" | "collection"; deliveryLocation?: string; notes?: string; submissionId?: string; items: Array<{ productId?: number; productName: string; quantity: number; unitPrice?: number }> }) {
+export async function createOrderRequest(input: { customer: CustomerInput; fulfillment: "delivery" | "collection"; deliveryLocation?: string; notes?: string; submissionId?: string; items: Array<{ productId?: number; productName: string; quantity: number; unitPrice?: number }> }, accountUserId?: string) {
   const db = await requireDb();
   if (!input.items.length) throw new Error("At least one item is required");
   if (input.fulfillment === "delivery" && !input.deliveryLocation?.trim()) throw new Error("A delivery town or area is required");
   const submissionId = input.submissionId?.toUpperCase() ?? randomBytes(12).toString("hex").toUpperCase();
   const reference = `DPH-ORD-${submissionId}`;
-  const existingOrder = await maybe(db.from("orderRequests").select("id,customerId,total").eq("reference", reference).limit(1).maybeSingle());
-  if (existingOrder) return { reference, orderId: existingOrder.id, customerId: existingOrder.customerId, total: existingOrder.total, existing: true };
+  const existingFields = accountUserId ? "id,customerId,total,accountUserId" : "id,customerId,total";
+  const existingOrder = await maybe(db.from("orderRequests").select(existingFields).eq("reference", reference).limit(1).maybeSingle());
+  if (existingOrder) return { reference, orderId: existingOrder.id, customerId: existingOrder.customerId, total: existingOrder.total, existing: true, accountLinked: Boolean(accountUserId && existingOrder.accountUserId === accountUserId) };
   const customer = await findOrCreateCustomer(input.customer);
   const productIds = input.items.map(item => item.productId).filter((id): id is number => typeof id === "number");
   const catalogProducts = productIds.length ? await many(db.from("products").select("id,name,price,availability,active,stock,productType,externalUrl").in("id", productIds)) : [];
@@ -122,10 +140,10 @@ export async function createOrderRequest(input: { customer: CustomerInput; fulfi
   const total = resolvedItems.some(item => item.unitPrice <= 0) ? null : resolvedItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   let order: any;
   try {
-    order = await one(db.from("orderRequests").insert({ reference, customerId: customer.id, fulfillment: input.fulfillment, deliveryLocation: input.fulfillment === "delivery" ? input.deliveryLocation?.trim() : null, notes: input.notes, total }).select().single());
+    order = await one(db.from("orderRequests").insert({ reference, customerId: customer.id, ...clean({ accountUserId }), fulfillment: input.fulfillment, deliveryLocation: input.fulfillment === "delivery" ? input.deliveryLocation?.trim() : null, notes: input.notes, total }).select().single());
   } catch (error) {
-    const duplicate = await maybe(db.from("orderRequests").select("id,customerId,total").eq("reference", reference).limit(1).maybeSingle()).catch(() => null);
-    if (duplicate) return { reference, orderId: duplicate.id, customerId: duplicate.customerId, total: duplicate.total, existing: true };
+    const duplicate = await maybe(db.from("orderRequests").select(existingFields).eq("reference", reference).limit(1).maybeSingle()).catch(() => null);
+    if (duplicate) return { reference, orderId: duplicate.id, customerId: duplicate.customerId, total: duplicate.total, existing: true, accountLinked: Boolean(accountUserId && duplicate.accountUserId === accountUserId) };
     throw error;
   }
   const items = resolvedItems.map(item => clean({ orderRequestId: order.id, productId: item.productId, productNameSnapshot: item.productName, quantity: item.quantity, unitPrice: item.unitPrice }));
@@ -135,7 +153,63 @@ export async function createOrderRequest(input: { customer: CustomerInput; fulfi
     await db.from("orderRequests").delete().eq("id", order.id);
     throw new Error(error.message);
   }
-  return { reference, orderId: order.id, customerId: customer.id, total, existing: false };
+  return { reference, orderId: order.id, customerId: customer.id, total, existing: false, accountLinked: Boolean(accountUserId) };
+}
+
+export async function getCustomerAccount(userId: string, verifiedPhone?: string) {
+  const db = await requireDb();
+  const account = await maybe(db.from("customerAccounts").select("userId,username,phone,createdAt").eq("userId", userId).limit(1).maybeSingle());
+  if (!account || (verifiedPhone && account.phone !== verifiedPhone)) return null;
+  return account as { userId: string; username: string; phone: string; createdAt: string };
+}
+
+export async function saveCustomerAccount(input: { userId: string; phone: string; username: string }) {
+  const db = await requireDb();
+  const username = input.username.trim().toLowerCase();
+  const phone = normalizeKenyanMpesaPhone(input.phone);
+  if (!phone) throw new Error("A verified Kenyan mobile number is required.");
+
+  const { data, error } = await db.from("customerAccounts").upsert({
+    userId: input.userId,
+    username,
+    phone,
+    updatedAt: new Date(),
+  }, { onConflict: "userId" }).select("userId,username,phone,createdAt").single();
+  if (error?.code === "23505") throw new CustomerAccountConflictError("That username or phone number is already associated with another customer account.");
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Supabase returned no customer account.");
+  return data as { userId: string; username: string; phone: string; createdAt: string };
+}
+
+export async function listCustomerOrders(userId: string) {
+  const db = await requireDb();
+  const orders = await many(db.from("orderRequests")
+    .select("id,reference,status,fulfillment,total,createdAt,updatedAt")
+    .eq("accountUserId", userId)
+    .order("createdAt", { ascending: false })
+    .limit(50));
+  if (!orders.length) return [];
+
+  const items = await many(db.from("orderItems")
+    .select("orderRequestId,productNameSnapshot,quantity,unitPrice")
+    .in("orderRequestId", orders.map(order => order.id)));
+  const itemsByOrder = new Map<number, typeof items>();
+  for (const item of items) {
+    const group = itemsByOrder.get(item.orderRequestId) ?? [];
+    group.push(item);
+    itemsByOrder.set(item.orderRequestId, group);
+  }
+
+  return orders.map(order => ({
+    id: order.id,
+    reference: order.reference,
+    status: order.status,
+    fulfillment: order.fulfillment,
+    total: order.total,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+    items: itemsByOrder.get(order.id) ?? [],
+  }));
 }
 
 async function countWhere(table: string, filters: Array<[string, string]>) {

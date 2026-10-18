@@ -58,6 +58,15 @@ const pages = [
     body: `<main id="main-content"><h1>Check an item request</h1><p>Use the guest order reference saved after your request. Sign-in is not required.</p><p><a href="/spares">Parts and accessories</a> · <a href="tel:+254718114009">Call 0718 114 009</a></p></main>`,
   },
   {
+    path: "/account",
+    title: "Customer Account | Digital Phone Hub",
+    description: "Private Digital Phone Hub customer sign-in and order history.",
+    keywords: "Digital Phone Hub customer account, private order history",
+    robots: "noindex,nofollow",
+    canonical: "",
+    body: `<main id="main-content"><h1>Optional customer account</h1><p>Sign up with a username and verified Kenyan phone number to keep new item requests together. Phone verification uses a one-time SMS code.</p><p>An account is optional. You can request parts and check an order as a guest.</p><p><a href="/spares">Continue to parts and accessories</a> · <a href="tel:+254718114009">Call 0718 114 009</a></p></main>`,
+  },
+  {
     path: "/owner-login",
     title: "Owner Login | Digital Phone Hub",
     description: "Private Digital Phone Hub owner access.",

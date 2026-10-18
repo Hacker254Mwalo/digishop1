@@ -17,6 +17,9 @@ import {
 } from "../db";
 import express from "express";
 import { ENV } from "./env";
+import { normalizeKenyanMpesaPhone } from "@shared/phone";
+
+export { normalizeKenyanMpesaPhone } from "@shared/phone";
 
 export type PublicPaymentStatus = "not_configured" | "setup_required" | "not_started" | "initiating" | "pending" | "paid" | "failed" | "review" | "rate_limited";
 
@@ -81,13 +84,6 @@ function readConfiguration(): DarajaConfiguration | null {
 
 export function isDarajaConfigured() {
   return readConfiguration() !== null;
-}
-
-export function normalizeKenyanMpesaPhone(input: string): string | null {
-  const digits = input.replace(/\D/g, "");
-  const national = digits.startsWith("254") ? digits.slice(3) : digits.startsWith("0") ? digits.slice(1) : digits;
-  if (!/^(?:7|1)\d{8}$/.test(national)) return null;
-  return `254${national}`;
 }
 
 function darajaTimestamp(date = new Date()) {

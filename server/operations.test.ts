@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 const dbMocks = vi.hoisted(() => ({
   addRepairNote: vi.fn().mockResolvedValue({ success: true }),
-  createOrderRequest: vi.fn().mockResolvedValue({ reference: "DPH-ORD-TEST", total: 0 }),
+  createOrderRequest: vi.fn().mockResolvedValue({ reference: "DPH-ORD-TEST", total: 0, accountLinked: false }),
   createRepairRequest: vi.fn().mockResolvedValue({ reference: "DPH-REP-TEST", status: "received" }),
+  CustomerAccountConflictError: class CustomerAccountConflictError extends Error {},
+  getCustomerAccount: vi.fn().mockResolvedValue(null),
   getDashboardSummary: vi.fn().mockResolvedValue({ newRepairs: 0, activeRepairs: 0, readyRepairs: 0, lowStock: 0, pendingOrders: 0 }),
   getRepairHistory: vi.fn().mockResolvedValue({ tickets: [], notes: [] }),
   getDb: vi.fn(),
@@ -14,11 +16,13 @@ const dbMocks = vi.hoisted(() => ({
   listRepairTickets: vi.fn().mockResolvedValue([]),
   listTechnicians: vi.fn().mockResolvedValue([]),
   listAllTechnicians: vi.fn().mockResolvedValue([]),
+  listCustomerOrders: vi.fn().mockResolvedValue([]),
   upsertTechnician: vi.fn().mockResolvedValue({ success: true }),
   updateOrderStatus: vi.fn().mockResolvedValue({ success: true }),
   updateRepairTicket: vi.fn().mockResolvedValue({ success: true }),
   upsertProduct: vi.fn().mockResolvedValue({ success: true }),
   setProductActive: vi.fn().mockResolvedValue({ success: true }),
+  saveCustomerAccount: vi.fn().mockResolvedValue({ userId: "customer-user-id", username: "siaya_customer", phone: "254718114009" }),
 }));
 
 const paymentMocks = vi.hoisted(() => ({
@@ -34,9 +38,10 @@ import type { TrpcContext } from "./_core/context";
 
 type TestUser = NonNullable<TrpcContext["user"]>;
 
-function contextFor(user: TestUser | null): TrpcContext {
+function contextFor(user: TestUser | null, customer: TrpcContext["customer"] = null): TrpcContext {
   return {
     user,
+    customer,
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: { clearCookie: () => undefined } as TrpcContext["res"],
   };
@@ -104,7 +109,47 @@ describe("owner operations", () => {
       items: [{ productName: "Phone screen", quantity: 1, unitPrice: 0 }],
     });
     expect(result.reference).toBe("DPH-ORD-TEST");
-    expect(dbMocks.createOrderRequest).toHaveBeenCalledWith(expect.objectContaining({ submissionId: "102030405060708090A0B0C0" }));
+    expect(dbMocks.createOrderRequest).toHaveBeenCalledWith(expect.objectContaining({ submissionId: "102030405060708090A0B0C0" }), undefined);
+  });
+
+  it("links an item request only when a verified account phone matches the submitted phone", async () => {
+    const customer = { id: "supabase-user-id", phone: "254718114009" };
+    dbMocks.getCustomerAccount.mockResolvedValueOnce({ userId: customer.id, username: "siaya_customer", phone: customer.phone });
+    const caller = appRouter.createCaller(contextFor(null, customer));
+    await caller.public.createOrderRequest({
+      customer: { name: "Brian Ochieng", phone: "+254 718 114 009" },
+      fulfillment: "delivery",
+      deliveryLocation: "Kisumu",
+      submissionId: "102030405060708090A0B0C2",
+      items: [{ productName: "Phone screen", quantity: 1 }],
+    });
+    expect(dbMocks.getCustomerAccount).toHaveBeenCalledWith(customer.id, customer.phone);
+    expect(dbMocks.createOrderRequest).toHaveBeenCalledWith(expect.objectContaining({ submissionId: "102030405060708090A0B0C2" }), customer.id);
+  });
+
+  it("falls back to guest ordering when the optional account table is unavailable", async () => {
+    const customer = { id: "supabase-user-id", phone: "254718114009" };
+    dbMocks.getCustomerAccount.mockRejectedValueOnce(new Error("customerAccounts table is missing"));
+    const caller = appRouter.createCaller(contextFor(null, customer));
+    await caller.public.createOrderRequest({
+      customer: { name: "Brian Ochieng", phone: "0718114009" },
+      fulfillment: "delivery",
+      deliveryLocation: "Kisumu",
+      submissionId: "102030405060708090A0B0C3",
+      items: [{ productName: "Phone screen", quantity: 1 }],
+    });
+    expect(dbMocks.createOrderRequest).toHaveBeenCalledWith(expect.objectContaining({ submissionId: "102030405060708090A0B0C3" }), undefined);
+  });
+
+  it("keeps customer account procedures separate from owner login", async () => {
+    const anonymous = appRouter.createCaller(contextFor(null));
+    await expect(anonymous.customer.me()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+
+    const customer = { id: "supabase-user-id", phone: "254718114009" };
+    const caller = appRouter.createCaller(contextFor(null, customer));
+    const profile = await caller.customer.register({ username: "Siaya_Customer" });
+    expect(profile).toEqual({ username: "siaya_customer", phone: "254718114009" });
+    expect(dbMocks.saveCustomerAccount).toHaveBeenCalledWith({ userId: customer.id, phone: customer.phone, username: "siaya_customer" });
   });
 
   it("requires a delivery area before accepting a delivery request", async () => {

@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { startLogin } from "./const";
+import { getCustomerAuthClient } from "./lib/customerAuth";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -42,7 +43,8 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
-      headers() {
+      async headers() {
+        const headers: Record<string, string> = {};
         // Preview auto-login fallback: when the browser blocks iframe cookies
         // (Safari ITP / private browsing / WebView), the runtime mirrors the
         // session into sessionStorage so we can forward it as a Bearer token.
@@ -53,14 +55,23 @@ const trpcClient = trpc.createClient({
             const prefix = `${COOKIE_NAME}=`;
             const pair = raw.split(";").find(s => s.trim().startsWith(prefix));
             const token = pair?.trim().slice(prefix.length);
-            if (token) {
-              return { Authorization: `Bearer ${token}` };
-            }
+            if (token) headers.Authorization = `Bearer ${token}`;
           }
         } catch {
           // sessionStorage unavailable
         }
-        return {};
+        try {
+          const customerAuth = await getCustomerAuthClient();
+          if (customerAuth) {
+            const { data, error } = await customerAuth.auth.getSession();
+            if (!error && data.session?.access_token) {
+              headers["x-customer-access-token"] = data.session.access_token;
+            }
+          }
+        } catch {
+          // Customer auth is optional; public guest routes remain available.
+        }
+        return headers;
       },
       fetch(input, init) {
         return globalThis.fetch(input, {
