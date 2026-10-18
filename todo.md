@@ -15,7 +15,7 @@
 - [x] Implemented private account profile and account-linked item-request history. Only server-verified, phone-confirmed Supabase identities can use customer account procedures.
 - [x] Kept guest purchase/request flows optional. New requests link only when the submitted number matches the verified account phone; older guest requests are never auto-claimed. If account storage is missing, the order request falls back to guest mode.
 - [x] Added an additive migration, private route headers/metadata, regression coverage and [`customer-account-setup.md`](docs/customer-account-setup.md).
-- [ ] Commit and push this account follow-up, deploy it, and verify `/account` and its noindex/no-store protections in production. Do not initiate SMS during live route QA.
+- [x] Committed and pushed as `23ff46cf33a4ec6d3c3a029d5b3f6b8ce762fbd8`; Vercel deployed it to Production. Verified `/account` returns HTTP 200 with noindex, no canonical/social URL, no-referrer and no-store protections, and is absent from the sitemap. The auth-config endpoint returned `{"enabled":false}`; no SMS was requested.
 - [ ] Before enabling customer OTP in production, apply `supabase/migrations/003_customer_accounts.sql`, configure a real Supabase Auth phone/SMS provider, set `CUSTOMER_ACCOUNTS_ENABLED=true` only on an isolated Vercel Preview/Supabase project, and verify the complete flow there. Keep the Production flag disabled until Preview passes and the owner approves activation. No simulated OTP may be presented as production authentication.
 
 ## Owner prerequisites and remaining operational work
