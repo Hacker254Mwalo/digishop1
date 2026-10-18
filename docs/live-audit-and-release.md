@@ -62,14 +62,14 @@ Use the companion [`customer trust and review-request playbook`](customer-trust-
 
 - `pnpm run check` — passed.
 - `pnpm test` — passed: 3 files, 26 tests, including guest API input validation, Kenyan phone normalization, sandbox/production deployment-stage restrictions, ignored/spoofed callback metadata, early callback queuing with no customer metadata, merchant-ID checks, callback throttling, provider-confirmed failures, disabled-config behavior and requiring a successful Daraja query before the atomic `paid` RPC.
-- `pnpm run check` and `pnpm run build` — passed after the callback/payment hardening; build emitted eight route files and a branded 404.
+- `pnpm run check` and `pnpm run build` — passed after the callback, database and deployment-stage hardening; build emitted eight route files and a branded 404.
 - Payment migration — PostgreSQL parser accepted all 46 statements. This is a syntax check only; no production Supabase database was available to execute the migration.
 - Built-route inspection — public/private routes had route-specific titles, descriptions and index policy; both order/payment and repair tracking are `noindex,nofollow`, omit canonical/Open Graph URLs and do not enter the sitemap; 404 contains the brand and recovery links.
 - Visual review — screenshots of the production build at desktop width and phone width on the homepage, Siaya repair page and guest order/payment status page. The final page uses the shared header/footer, remains readable at 390px and does not require sign-in.
 - Local API callback smoke test — malformed callback returned JSON HTTP 400; a 70 KB JSON payload exceeded the dedicated 64 KB route limit and returned HTTP 413. No provider request or payment was made.
 - `git diff --check` — passed.
 - Initial live read-only audit — `/`, `/repair` and `/spares` were inspected. The catalogue exposed no verified model-specific product/price inventory, so none was invented. No booking, order, login or admin mutation was submitted during the audit.
-- Production deployment — Vercel confirmed commit `34f06f84f69e176fc7e1259482aeaeab5fa25b14` deployed successfully.
+- Production deployment — Vercel confirmed final commit `2a23eff119b1ffb8a019806383021da5cd0a1c49` deployed successfully.
 - Live HTTP check — `/`, `/phone-repair-siaya`, `/repair`, `/repair-status`, `/spares`, `/order-status`, `/owner-login` and `/admin` returned HTTP 200; a unique unknown path returned HTTP 404 with brand/recovery links; `/robots.txt` and `/sitemap.xml` returned HTTP 200. Both private status routes returned `noindex,nofollow`, `Referrer-Policy: no-referrer` and `Cache-Control: private, no-store`; neither was listed in the sitemap.
 - Live rendered QA — homepage, repair intake, catalogue and the deployed guest order-status page rendered in the browser. The order-status page shows the reference lookup form without requiring sign-in. The public products API returned an empty list; the catalogue presents an honest empty state, and the parts summary says “No items selected yet” without showing a zero-KES estimate. No customer details were entered and no request/payment/admin mutation was created during the live check.
 
