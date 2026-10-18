@@ -5,6 +5,7 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
+import { registerDarajaCallback } from "./daraja";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -30,6 +31,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 export async function createApp(): Promise<Application> {
   const app = express();
+  registerDarajaCallback(app);
   const server = createServer(app);
 
   app.use(express.json({ limit: "50mb" }));

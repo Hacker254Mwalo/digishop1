@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle2, ClipboardCheck, Loader2, Search, ShieldCheck, Wrench } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link } from "wouter";
 import PublicShell from "@/components/PublicShell";
 import { trpc } from "@/lib/trpc";
@@ -13,9 +13,25 @@ function statusLabel(value: string) {
 }
 
 export default function RepairStatus() {
-  const initialReference = typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("reference") ?? "";
-  const [reference, setReference] = useState(initialReference);
-  const [submittedReference, setSubmittedReference] = useState(initialReference.trim().toUpperCase());
+  const [reference, setReference] = useState("");
+  const [submittedReference, setSubmittedReference] = useState("");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("reference") ?? "";
+    if (params.has("reference")) window.history.replaceState(window.history.state, "", window.location.pathname);
+    let handoff = "";
+    try {
+      handoff = window.sessionStorage.getItem("dph-repair-status-reference") ?? "";
+      window.sessionStorage.removeItem("dph-repair-status-reference");
+    } catch {
+      // Manual reference entry remains available when session storage is unavailable.
+    }
+    const initial = (handoff || fromUrl).trim().toUpperCase();
+    if (initial) {
+      setReference(initial);
+      setSubmittedReference(initial);
+    }
+  }, []);
   const status = trpc.public.getRepairStatus.useQuery({ reference: submittedReference }, { enabled: submittedReference.length >= 6, retry: false });
 
   const submit = (event: FormEvent) => {
@@ -42,7 +58,7 @@ export default function RepairStatus() {
                 : status.isLoading ? <div className="flex items-center gap-3 text-sm font-medium text-[#46535a]"><Loader2 className="h-5 w-5 animate-spin text-[#a93823]" />Checking the repair record…</div>
                   : status.error ? <div><p className="font-extrabold text-[#a93823]">We could not verify that reference.</p><p className="mt-2 text-sm leading-6 text-[#56636a]">Check the code and try again, or call 0718 114 009. The same message is shown whether a request is missing or has an invalid reference.</p></div>
                     : !status.data ? <div><p className="font-extrabold text-[#a93823]">We could not verify that reference.</p><p className="mt-2 text-sm leading-6 text-[#56636a]">Check the code and try again, or call 0718 114 009.</p></div>
-                      : <div><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#e4f3ed] text-[#205c52]"><CheckCircle2 className="h-6 w-6" /></span><div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#205c52]">Repair record found</p><p className="mt-1 font-mono text-sm font-bold text-[#202a30]">{status.data.reference}</p></div></div><div className="mt-7 rounded-xl border border-[#d9d2c8] bg-[#f6f3ee] p-5"><div className="flex items-center gap-2 text-[#a93823]"><ClipboardCheck className="h-4 w-4" /><p className="text-[10px] font-extrabold uppercase tracking-[.16em]">Current stage</p></div><p className="mt-2 text-2xl font-black text-[#202a30]">{statusLabel(status.data.status)}</p><p className="mt-3 text-xs text-[#69747b]">Last recorded: {formatDate(status.data.updatedAt)}</p></div><div className="mt-5 rounded-xl border border-[#d9d2c8] p-4"><p className="text-sm font-extrabold text-[#202a30]">Need to discuss the next step?</p><p className="mt-1 text-sm leading-6 text-[#56636a]">Call the service desk and quote the reference above.</p><a href={`https://wa.me/254718114009?text=${encodeURIComponent(`Hello Digital Phone Hub, I am following up on repair ${status.data.reference}.`)}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-extrabold text-[#205c52]"><ShieldCheck className="h-4 w-4" />Send a WhatsApp message <ArrowRight className="h-4 w-4" /></a></div></div>}
+                      : <div><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#e4f3ed] text-[#205c52]"><CheckCircle2 className="h-6 w-6" /></span><div><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#205c52]">Repair record found</p><p className="mt-1 font-mono text-sm font-bold text-[#202a30]">{status.data.reference}</p></div></div><div className="mt-7 rounded-xl border border-[#d9d2c8] bg-[#f6f3ee] p-5"><div className="flex items-center gap-2 text-[#a93823]"><ClipboardCheck className="h-4 w-4" /><p className="text-[10px] font-extrabold uppercase tracking-[.16em]">Current stage</p></div><p className="mt-2 text-2xl font-black text-[#202a30]">{statusLabel(status.data.status)}</p><p className="mt-3 text-xs text-[#69747b]">Last recorded: {formatDate(status.data.updatedAt)}</p></div><div className="mt-5 rounded-xl border border-[#d9d2c8] p-4"><p className="text-sm font-extrabold text-[#202a30]">Need to discuss the next step?</p><p className="mt-1 text-sm leading-6 text-[#56636a]">Call the service desk and quote the reference above.</p><a href={`https://wa.me/254718114009?text=${encodeURIComponent(`Hello Digital Phone Hub, I am following up on my repair and can provide the reference.`)}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm font-extrabold text-[#205c52]"><ShieldCheck className="h-4 w-4" />Send a WhatsApp message <ArrowRight className="h-4 w-4" /></a></div></div>}
             </section>
           </div>
         </section>

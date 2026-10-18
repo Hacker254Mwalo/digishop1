@@ -44,8 +44,18 @@ const pages = [
     title: "Track Your Phone Repair | Digital Phone Hub",
     description: "Check the progress of your Digital Phone Hub repair using your repair reference.",
     keywords: "repair tracking, phone repair Siaya, Digital Phone Hub",
-    robots: "noindex,follow",
+    robots: "noindex,nofollow",
+    canonical: "",
     body: `<main id="main-content"><h1>Track your repair</h1><p>Use your repair reference to check the current stage of your request.</p><p><a href="/repair">Book a repair</a> · <a href="tel:+254718114009">Call 0718 114 009</a></p></main>`,
+  },
+  {
+    path: "/order-status",
+    title: "Track an Item Request | Digital Phone Hub",
+    description: "Check your Digital Phone Hub order request and M-PESA payment state using its guest reference.",
+    keywords: "Digital Phone Hub order status, Siaya M-PESA",
+    robots: "noindex,nofollow",
+    canonical: "",
+    body: `<main id="main-content"><h1>Check an item request</h1><p>Use the guest order reference saved after your request. Sign-in is not required.</p><p><a href="/spares">Parts and accessories</a> · <a href="tel:+254718114009">Call 0718 114 009</a></p></main>`,
   },
   {
     path: "/owner-login",
@@ -84,12 +94,16 @@ function pageHtml(page) {
   html = updateMeta(html, 'name="robots"', 'name="robots"', page.robots);
   html = updateMeta(html, 'property="og:title"', 'property="og:title"', page.title);
   html = updateMeta(html, 'property="og:description"', 'property="og:description"', page.description);
-  html = updateMeta(html, 'property="og:url"', 'property="og:url"', canonical);
+  html = page.canonical === ""
+    ? html.replace(/<meta property="og:url"[^>]*\s*\/>/, "")
+    : updateMeta(html, 'property="og:url"', 'property="og:url"', canonical);
   html = updateMeta(html, 'property="og:image"', 'property="og:image"', image);
   html = updateMeta(html, 'name="twitter:title"', 'name="twitter:title"', page.title);
   html = updateMeta(html, 'name="twitter:description"', 'name="twitter:description"', page.description);
   html = updateMeta(html, 'name="twitter:image"', 'name="twitter:image"', image);
-  html = html.replace(/<link rel="canonical" href="[^"]*"\s*\/>/, `<link rel="canonical" href="${canonical}" />`);
+  html = page.canonical === ""
+    ? html.replace(/<link rel="canonical" href="[^"]*"\s*\/>/, "")
+    : html.replace(/<link rel="canonical" href="[^"]*"\s*\/>/, `<link rel="canonical" href="${page.canonical || canonical}" />`);
   html = html.replace(/<div id="root"><\/div>/, `<div id="root">${page.body}</div>`);
   const jsonLd = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
   if (jsonLd) {

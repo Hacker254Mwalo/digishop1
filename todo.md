@@ -13,7 +13,7 @@
 - [x] Matched owner-session cookie lifetime to Supabase token expiry; clear the owner cookie on logout and attempt provider-side session revocation. Removed the visible default owner email.
 - [x] Added a branded build-time 404 output and Vercel unmatched-route handling while retaining API/storage routes; private tracking/owner pages are `noindex`.
 - [x] Added the requested review/trust playbook and reusable senior product/engineering prompt under `docs/`.
-- [x] Passed TypeScript checks, 12 automated tests and the production build; inspected production-build screenshots at desktop and 390px phone width.
+- [x] Passed TypeScript checks, 21 automated tests and the production build; inspected production-build screenshots at desktop and 390px phone width, including guest order/payment status.
 
 ## Release and live verification
 
@@ -21,12 +21,14 @@
 - [x] Pushed the release; Vercel confirmed the final production deployment for `7523ef5a6314afccb81d4aafc497e4b22b76666d`.
 - [x] Checked live public routes, route metadata, sitemap, robots and unknown-route HTTP 404; the rendered homepage, repair intake and catalogue loaded without browser-console output.
 - [x] No production customer request, payment or owner mutation was created during QA. The empty repair form was clicked with required fields blank; no customer data was entered.
+- [ ] Commit and deploy the new guest Daraja checkout, order-status route and payment safeguards; the previously verified live site does not yet contain this follow-up work.
+- [ ] After deployment, verify `/order-status` is live, noindex and has no console errors; use only a random nonexistent reference and do not send an STK request.
 
 ## Owner decisions and real data still needed — no mock flows
 
-- [ ] **Payments:** choose a merchant provider (Safaricom Daraja, Paystack or Pesapal) and authorize/configure its sandbox/live credentials and callback settings through the approved secret process. There is no payment checkout or “paid” state until this exists.
-- [ ] **Customer registration/login:** choose a verified identity channel (for example, phone OTP or email), recovery flow and actual customer-account requirements. Existing customer entries are guest-service contact records, not login accounts.
-- [ ] **Customer notifications:** choose and configure an authorized email/SMS/WhatsApp API provider and approve which customer events should be sent. Current integration is owner-facing; it does not send customer confirmations.
+- [x] **Daraja guest-checkout code:** initiate STK only for an owner-confirmed positively priced order; use server-side order total/phone; persist idempotent attempts; reconcile callback ID, amount, phone and order total with a Daraja status query before marking paid; rate-limit retries and prevent closing orders during unresolved payment.
+- [ ] **Payment activation:** apply the payment table migration, configure Daraja merchant credentials, shortcode, passkey, transaction type, environment and callback in Vercel, then test in sandbox. No M-PESA prompt or paid state is enabled without these prerequisites.
+- [x] **Guest access and messages:** purchasing does not require customer registration. Current real follow-up is manual call/WhatsApp; no automated customer SMS/email/WhatsApp delivery is claimed.
 - [ ] **Catalogue:** add accurate product names, real photos, model compatibility, KES prices, stock and availability in the owner portal. The live public-products API currently returns an empty list; the site shows an honest empty state rather than inventing stock.
 - [ ] **Local trust:** verify the exact customer-facing street address/landmark, hours, service/delivery area and warranty terms. Confirm the actual Google Business Profile and only then add its real review URL.
 

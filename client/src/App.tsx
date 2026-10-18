@@ -17,6 +17,7 @@ const OwnerLogin = lazy(() => import("./pages/OwnerLogin"));
 const RepairBooking = lazy(() => import("./pages/RepairBooking"));
 const RepairStatus = lazy(() => import("./pages/RepairStatus"));
 const SpareParts = lazy(() => import("./pages/SpareParts"));
+const OrderStatus = lazy(() => import("./pages/OrderStatus"));
 const PhoneRepairSiaya = lazy(() => import("./pages/PhoneRepairSiaya"));
 
 function AdminRoute() {
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/repair" component={RepairBooking} />
       <Route path="/repair-status" component={RepairStatus} />
       <Route path="/spares" component={SpareParts} />
+      <Route path="/order-status" component={OrderStatus} />
       <Route path="/phone-repair-siaya" component={PhoneRepairSiaya} />
       <Route path="/owner-login" component={OwnerLogin} />
       <Route path="/admin" component={AdminRoute} />

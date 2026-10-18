@@ -119,6 +119,23 @@ export const orderItems = mysqlTable("orderItems", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const paymentAttempts = mysqlTable("paymentAttempts", {
+  id: int("id").autoincrement().primaryKey(),
+  orderRequestId: int("orderRequestId").notNull(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  status: mysqlEnum("status", ["initiating", "pending", "paid", "failed", "review"]).notNull(),
+  idempotencyKey: varchar("idempotencyKey", { length: 64 }).notNull().unique(),
+  amount: int("amount").notNull(),
+  phone: varchar("phone", { length: 16 }).notNull(),
+  merchantRequestId: varchar("merchantRequestId", { length: 128 }),
+  checkoutRequestId: varchar("checkoutRequestId", { length: 128 }).unique(),
+  resultCode: varchar("resultCode", { length: 32 }),
+  resultDescription: text("resultDescription"),
+  mpesaReceiptNumber: varchar("mpesaReceiptNumber", { length: 32 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Customer = typeof customers.$inferSelect;
@@ -129,3 +146,4 @@ export type Technician = typeof technicians.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type OrderRequest = typeof orderRequests.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
+export type PaymentAttempt = typeof paymentAttempts.$inferSelect;

@@ -201,8 +201,21 @@ export async function listAdminProducts() {
 export async function listOrderRequests() {
   const db = await requireDb();
   const orders = await many(db.from("orderRequests").select("*").order("createdAt", { ascending: false }));
-  const [customers, items] = await Promise.all([many(db.from("customers").select("*")), many(db.from("orderItems").select("*"))]);
-  return orders.map(order => ({ order, customer: customers.find(customer => customer.id === order.customerId) ?? null, items: items.filter(item => item.orderRequestId === order.id) }));
+  const orderIds = orders.map(order => order.id);
+  const [customers, items, paymentResult] = await Promise.all([
+    many(db.from("customers").select("*")),
+    many(db.from("orderItems").select("*")),
+    orderIds.length ? db.from("paymentAttempts").select("id,orderRequestId,status,amount,mpesaReceiptNumber,updatedAt").in("orderRequestId", orderIds).order("createdAt", { ascending: false }) : Promise.resolve({ data: [], error: null }),
+  ]);
+  const paymentRows = paymentResult.error ? [] : paymentResult.data ?? [];
+  const paymentStorageAvailable = !paymentResult.error;
+  return orders.map(order => ({
+    order,
+    customer: customers.find(customer => customer.id === order.customerId) ?? null,
+    items: items.filter(item => item.orderRequestId === order.id),
+    payment: paymentRows.find(attempt => attempt.orderRequestId === order.id) ?? null,
+    paymentStorageAvailable,
+  }));
 }
 
 export async function listCustomers() {
@@ -289,8 +302,142 @@ export async function setProductActive(input: { id: number; active: boolean }) {
   return { success: true } as const;
 }
 
+async function loadOrderPaymentContext(db: SupabaseClient, order: any) {
+  const [customer, items] = await Promise.all([
+    maybe(db.from("customers").select("phone").eq("id", order.customerId).limit(1).maybeSingle()),
+    many(db.from("orderItems").select("unitPrice,quantity").eq("orderRequestId", order.id)),
+  ]);
+  return {
+    order,
+    customerPhone: customer?.phone ?? "",
+    allItemsPriced: items.length > 0 && items.every(item => Number(item.unitPrice) > 0),
+  };
+}
+
+export async function getOrderPaymentContext(reference: string) {
+  const db = await requireDb();
+  const order = await maybe(db.from("orderRequests").select("id,reference,customerId,status,total,updatedAt").eq("reference", reference).limit(1).maybeSingle());
+  return order ? loadOrderPaymentContext(db, order) : null;
+}
+
+export async function getOrderPaymentContextById(orderRequestId: number) {
+  const db = await requireDb();
+  const order = await maybe(db.from("orderRequests").select("id,reference,customerId,status,total,updatedAt").eq("id", orderRequestId).limit(1).maybeSingle());
+  return order ? loadOrderPaymentContext(db, order) : null;
+}
+
+export async function getLatestPaymentAttempt(orderRequestId: number) {
+  const db = await requireDb();
+  return maybe(db.from("paymentAttempts").select("*").eq("orderRequestId", orderRequestId).order("createdAt", { ascending: false }).limit(1).maybeSingle());
+}
+
+export async function countPaymentAttemptsSince(orderRequestId: number, since: string) {
+  const db = await requireDb();
+  const { count, error } = await db.from("paymentAttempts").select("id", { count: "exact", head: true }).eq("orderRequestId", orderRequestId).gte("createdAt", since);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+export async function getPaymentAttemptByIdempotencyKey(idempotencyKey: string) {
+  const db = await requireDb();
+  return maybe(db.from("paymentAttempts").select("*").eq("idempotencyKey", idempotencyKey).limit(1).maybeSingle());
+}
+
+export async function getActivePaymentAttempt(orderRequestId: number) {
+  const db = await requireDb();
+  return maybe(db.from("paymentAttempts").select("*").eq("orderRequestId", orderRequestId).in("status", ["initiating", "pending", "review"]).order("createdAt", { ascending: false }).limit(1).maybeSingle());
+}
+
+export async function getPaymentAttemptByCheckoutId(checkoutRequestId: string) {
+  const db = await requireDb();
+  return maybe(db.from("paymentAttempts").select("*").eq("checkoutRequestId", checkoutRequestId).limit(1).maybeSingle());
+}
+
+export async function isDarajaPaymentStorageReady() {
+  const db = await requireDb();
+  const { data, error } = await db.rpc("daraja_payment_ready");
+  if (error) return false;
+  return data === true;
+}
+
+export async function claimDarajaCallback(checkoutRequestId: string) {
+  const db = await requireDb();
+  const { data, error } = await db.rpc("claim_daraja_callback", { p_checkout_request_id: checkoutRequestId });
+  if (error) throw new Error(error.message);
+  return data === true;
+}
+
+export async function storeDarajaCallback(input: { checkoutRequestId: string; merchantRequestId: string; payload: unknown }) {
+  const db = await requireDb();
+  const { error } = await db.rpc("store_daraja_callback", {
+    p_checkout_request_id: input.checkoutRequestId,
+    p_merchant_request_id: input.merchantRequestId,
+    p_payload: input.payload,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function getQueuedDarajaCallback(checkoutRequestId: string) {
+  const db = await requireDb();
+  const { data, error } = await db.rpc("get_daraja_callback", { p_checkout_request_id: checkoutRequestId });
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
+
+export async function markQueuedDarajaCallbackProcessed(checkoutRequestId: string) {
+  const db = await requireDb();
+  const { error } = await db.rpc("mark_daraja_callback_processed", { p_checkout_request_id: checkoutRequestId });
+  if (error) throw new Error(error.message);
+}
+
+export async function recordVerifiedDarajaPayment(input: { attemptId: number; checkoutRequestId: string; merchantRequestId: string; resultDescription: string }) {
+  const db = await requireDb();
+  const { data, error } = await db.rpc("record_verified_daraja_payment", {
+    p_attempt_id: input.attemptId,
+    p_checkout_request_id: input.checkoutRequestId,
+    p_merchant_request_id: input.merchantRequestId,
+    p_result_description: input.resultDescription,
+  });
+  if (error) throw new Error(error.message);
+  return data === true;
+}
+
+export async function createPaymentAttempt(input: { orderRequestId: number; idempotencyKey: string; amount: number; phone: string; status: "initiating" }) {
+  const db = await requireDb();
+  return one(db.from("paymentAttempts").insert({ provider: "safaricom_daraja", ...input }).select().single());
+}
+
+export async function updatePaymentAttempt(input: { id: number; status: "initiating" | "pending" | "failed" | "review"; merchantRequestId?: string | null; checkoutRequestId?: string | null; resultCode?: string | null; resultDescription?: string | null; mpesaReceiptNumber?: string | null }) {
+  const db = await requireDb();
+  const { id, ...updates } = input;
+  const updateQuery = db.from("paymentAttempts").update({ ...clean(updates), updatedAt: new Date() }).eq("id", id).neq("status", "paid");
+  const { data, error } = await updateQuery.select().maybeSingle();
+  if (error) throw new Error(error.message);
+  if (data) return data;
+  const existing = await maybe(db.from("paymentAttempts").select().eq("id", id).limit(1).maybeSingle());
+  if (existing?.status === "paid") return existing;
+  if (!existing) throw new Error("Payment attempt was not found");
+  throw new Error("Payment attempt could not be updated");
+}
+
 export async function updateOrderStatus(input: { id: number; status: "new" | "confirmed" | "fulfilled" | "cancelled" }) {
   const db = await requireDb();
+  if (input.status !== "confirmed") {
+    const darajaConfigured = Boolean(ENV.mpesaDarajaConsumerKey || ENV.mpesaDarajaConsumerSecret || ENV.mpesaDarajaPasskey || ENV.mpesaDarajaShortcode);
+    if (darajaConfigured) {
+      const { data: storageReady, error: readinessError } = await db.rpc("daraja_payment_ready");
+      if (readinessError || storageReady !== true) throw new Error("M-PESA payment safeguards are not ready. The order status was not changed.");
+    }
+    try {
+      const blockingStatuses = input.status === "cancelled" ? ["initiating", "pending", "review", "paid"] : ["initiating", "pending", "review"];
+      const payment = await maybe(db.from("paymentAttempts").select("id").eq("orderRequestId", input.id).in("status", blockingStatuses).limit(1).maybeSingle());
+      if (payment) throw new Error(input.status === "cancelled" ? "This order has an M-PESA payment in progress or verified. Resolve it before cancelling the order." : "This order has an M-PESA prompt awaiting confirmation or review. Resolve it before closing the order.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const missingPaymentTable = /paymentAttempts/i.test(message) && /(does not exist|not found|schema cache|could not find)/i.test(message);
+      if (!missingPaymentTable) throw error;
+    }
+  }
   const { data, error } = await db.from("orderRequests").update({ status: input.status, updatedAt: new Date() }).eq("id", input.id).select("id").maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Order request was not found");

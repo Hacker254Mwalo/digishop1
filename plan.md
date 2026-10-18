@@ -8,7 +8,7 @@ The intended experience must be usable by a first-time phone visitor and by the 
 
 ## Confirmed product constraints and unresolved dependencies
 
-The repo and current session have no configured payment gateway credential or payment connector, no implemented customer-account workflow, and no customer email/SMS delivery channel. Existing guest repair/order request flows and owner-only notification plumbing are real; they are not a paid order checkout, customer registration system, or customer-notification service. Do not ship dummy payment controls or claim those journeys are complete. To enable a real Kenyan payment flow, agree a merchant provider first (for example Safaricom Daraja, Paystack, or Pesapal), then configure its sandbox/live credentials and callback domain. To register and notify customers, confirm the chosen identity/verification and delivery channels, and their API credentials. Maintain all existing guest paths meanwhile.
+For this iteration, assume **Safaricom Daraja / M-PESA** as the single Kenyan payment provider. Customers must be able to submit an order without creating an account; account creation remains optional and must never block checkout. Existing guest repair/parts requests and manual call/WhatsApp follow-up are real, but are not paid checkout or automatic customer notifications. No Daraja merchant credentials are configured and the required payment migration must be applied to Supabase before real checkout can be activated. Do not ship dummy payment controls, send a live STK prompt, or call an order paid until the merchant setup is complete and Safaricom's provider status is verified.
 
 Do not expose additional shop-location, stock, price, repair-time, delivery or warranty claims without owner-verified source data. No verified Google review URL or complete street address has been found; do not invent either. Google does not promise a number-one local ranking.
 
@@ -19,6 +19,8 @@ Do not expose additional shop-location, stock, price, repair-time, delivery or w
 2. **Make repair service reliable and private.** Align the customer-facing device types with the deployed DB schema. Create unguessable repair references, avoid returning device/issue/quote PII through an unverified public lookup, give the customer a direct and clear next step after booking, and preserve retry-safe behavior. Owner updates must check that a row changed and show the resulting status truthfully.
 
 3. **Separate genuine stock orders from quote requests.** Continue showing only owner-managed catalogue records. The server is authoritative for active state, stock, compatibility-related inputs and KES prices. Require location for delivery. A zero-priced/custom item remains a clearly named quote/availability request and must not be described as a priced/paid order. Keep custom enquiries distinct alongside catalogue items. Price and availability changes must produce clear, retryable customer feedback. Do not claim a sale is paid or order accepted until a real provider confirms it.
+
+   Add a guest-first payment path only for an owner-confirmed order with a positive, server-persisted total. The customer starts the M-PESA STK prompt explicitly; the server ignores browser-supplied amounts and phone numbers, stores an idempotent payment attempt, and records success only after matching the persisted checkout ID and reconciling with Daraja. Require the new Supabase migration and all merchant configuration; with any requirement missing, keep payment unavailable and retain manual call/WhatsApp follow-up. Never store PINs or card details.
 
 4. **Improve owner operations.** Preserve the Supabase owner guard; remove hard-coded owner identity from the visible login, make edits await successful writes, provide precise per-record feedback, confirm destructive actions, and return not-found/conflict errors instead of false successes. Keep existing repair, inventory, orders, technician and overview controls real. Add only customer/account management and sales/finance analytics whose definitions and data are actually available.
 
@@ -43,12 +45,12 @@ Do not expose additional shop-location, stock, price, repair-time, delivery or w
 
 ## Project structure
 
-- `client/src/pages/` — public home, repair booking, status, parts, owner login and admin workspaces.
+- `client/src/pages/` — public home, repair booking/status, guest order/payment status, parts, owner login and admin workspaces.
 - `client/src/components/PublicShell.tsx` — shared navigation, mobile action rail, footer and global customer-contact affordances.
 - `client/src/components/SeoHead.tsx` and `scripts/prerender-public-pages.mjs` — per-route client/static content and metadata; keep their route data consistent.
 - `server/routers.ts` — typed tRPC public/admin API contracts and validation.
-- `server/db.ts`, `drizzle/schema.ts`, `supabase/migrations/` — persistent customer, repair, catalogue, order and owner data.
+- `server/db.ts`, `server/_core/daraja.ts`, `drizzle/schema.ts`, `supabase/migrations/` — persistent customer, repair, catalogue, order, idempotent payment-attempt and owner data.
 - `server/_core/ownerAuth.ts`, `context.ts` — Supabase owner session and server-side role checks.
-- `server/_core/notification.ts`, `server/_core/env.ts` — existing owner notification and configured integration boundaries.
+- `server/_core/notification.ts`, `server/_core/env.ts` — existing owner notification and server-only Daraja integration configuration.
 - `vercel.json`, `api/handler.js` build output — static route, API and object storage routing.
-- `docs/` — the reusable AI-assisted implementation prompt and final cited audit notes.
+- `docs/` — reusable senior product/engineering prompt, cited audit notes and Daraja activation procedure.

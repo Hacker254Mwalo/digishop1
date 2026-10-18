@@ -41,8 +41,8 @@ export default function RepairBooking() {
   };
 
   if (submitted) {
-    const trackingUrl = `/repair-status?reference=${encodeURIComponent(submitted.reference)}`;
-    const whatsappUrl = `https://wa.me/254718114009?text=${encodeURIComponent(`Hello Digital Phone Hub, I have submitted repair request ${submitted.reference}. Please confirm the next step.`)}`;
+    const trackingUrl = "/repair-status";
+    const whatsappUrl = `https://wa.me/254718114009?text=${encodeURIComponent(`Hello Digital Phone Hub, I have submitted a repair request. Please confirm the next step; I can provide my reference.`)}`;
     return (
       <PublicShell>
         <main id="main-content" className="grid min-h-[70vh] place-items-center bg-[#f6f3ee] px-4 pb-24 pt-12 sm:pb-12">
@@ -52,7 +52,7 @@ export default function RepairBooking() {
             <h1 className="mt-3 text-3xl font-black tracking-[-.04em] text-[#202a30] sm:text-4xl">Your request is recorded.</h1>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-[#56636a]">The service desk can use the details you provided to confirm the next step. No repair work starts before you approve the repair plan and price.</p>
             <div className="mx-auto mt-6 max-w-md rounded-xl border border-[#d9d2c8] bg-[#f6f3ee] p-5"><p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#69747b]">Your repair reference</p><p className="mt-2 break-all font-mono text-xl font-black text-[#a93823]">{submitted.reference}</p><p className="mt-2 text-xs leading-5 text-[#69747b]">Keep this code. It opens a status-only tracking page; do not share it publicly.</p></div>
-            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row"><Link href={trackingUrl} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#d94b2b] px-5 py-3 text-sm font-extrabold text-white hover:bg-[#b53d25]">Track this repair <ArrowRight className="h-4 w-4" /></Link><a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#cfc5b8] px-5 py-3 text-sm font-extrabold text-[#202a30]"><Phone className="h-4 w-4 text-[#205c52]" />Message the desk</a></div>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row"><Link href={trackingUrl} onClick={() => { try { window.sessionStorage.setItem("dph-repair-status-reference", submitted.reference); } catch { /* The customer can enter the reference manually. */ } }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#d94b2b] px-5 py-3 text-sm font-extrabold text-white hover:bg-[#b53d25]">Track this repair <ArrowRight className="h-4 w-4" /></Link><a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#cfc5b8] px-5 py-3 text-sm font-extrabold text-[#202a30]"><Phone className="h-4 w-4 text-[#205c52]" />Message the desk</a></div>
             <div className="mt-6 flex flex-col items-center gap-3"><button type="button" onClick={startAnotherRequest} className="text-sm font-bold text-[#a93823] underline-offset-4 hover:underline">Start another repair request</button><Link href="/" className="text-sm font-bold text-[#56636a] hover:text-[#a93823]">Back to Digital Phone Hub</Link></div>
           </section>
         </main>

@@ -21,7 +21,13 @@ const dbMocks = vi.hoisted(() => ({
   setProductActive: vi.fn().mockResolvedValue({ success: true }),
 }));
 
+const paymentMocks = vi.hoisted(() => ({
+  getGuestOrderPaymentStatus: vi.fn().mockResolvedValue({ reference: "DPH-ORD-102030405060708090A0B0C0", orderStatus: "confirmed", total: 1200, paymentStatus: "not_configured", paymentAvailable: false, canPay: false }),
+  startGuestOrderPayment: vi.fn().mockResolvedValue({ status: "not_configured", message: "M-PESA is not enabled." }),
+}));
+
 vi.mock("./db", () => dbMocks);
+vi.mock("./_core/daraja", () => paymentMocks);
 
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
@@ -108,6 +114,22 @@ describe("owner operations", () => {
       fulfillment: "delivery",
       items: [{ productName: "Phone screen", quantity: 1 }],
     })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("lets a guest check a saved order payment state without creating an account", async () => {
+    const caller = appRouter.createCaller(contextFor(null));
+    const result = await caller.public.getOrderPaymentStatus({ reference: "DPH-ORD-102030405060708090A0B0C0" });
+    expect(result?.paymentStatus).toBe("not_configured");
+    expect(paymentMocks.getGuestOrderPaymentStatus).toHaveBeenCalledWith("DPH-ORD-102030405060708090A0B0C0");
+  });
+
+  it("accepts only an order reference and retry token for guest M-PESA initiation", async () => {
+    const caller = appRouter.createCaller(contextFor(null));
+    const input = { reference: "DPH-ORD-102030405060708090A0B0C0", idempotencyKey: "102030405060708090A0B0C1" };
+    await caller.public.startOrderPayment(input);
+    expect(paymentMocks.startGuestOrderPayment).toHaveBeenCalledWith(input);
+    await expect(caller.public.startOrderPayment({ ...input, amount: 1, phone: "254718114009" } as never)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller.public.startOrderPayment({ ...input, reference: "DPH-ORD-timestamp" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("allows an owner to move a repair stage and add an operational note", async () => {

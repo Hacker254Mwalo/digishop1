@@ -84,8 +84,16 @@ const configs: Record<string, SeoConfig> = {
     title: "Track Your Phone Repair | Digital Phone Hub",
     description: "Check the progress of your Digital Phone Hub repair using your repair reference.",
     keywords: "repair tracking, phone repair Siaya, Digital Phone Hub",
-    canonical: `${SITE_URL}/repair-status`,
-    robots: "noindex,follow",
+    canonical: "",
+    robots: "noindex,nofollow",
+    type: "website",
+  },
+  "/order-status": {
+    title: "Track an Item Request | Digital Phone Hub",
+    description: "Check your Digital Phone Hub order request and M-PESA payment state using its guest reference.",
+    keywords: "Digital Phone Hub order status, Siaya M-PESA",
+    canonical: "",
+    robots: "noindex,nofollow",
     type: "website",
   },
   "/owner-login": {
@@ -147,7 +155,6 @@ export default function SeoHead() {
   useEffect(() => {
     const pathname = location.split("?")[0] || "/";
     const config = getConfig(pathname);
-    const socialUrl = config.canonical || `${SITE_URL}${pathname}`;
     document.title = config.title;
     upsertMeta('meta[name="description"]', { name: "description" }, config.description);
     upsertMeta('meta[name="keywords"]', { name: "keywords" }, config.keywords);
@@ -155,7 +162,8 @@ export default function SeoHead() {
     upsertMeta('meta[property="og:title"]', { property: "og:title" }, config.title);
     upsertMeta('meta[property="og:description"]', { property: "og:description" }, config.description);
     upsertMeta('meta[property="og:type"]', { property: "og:type" }, config.type === "service" ? "website" : config.type);
-    upsertMeta('meta[property="og:url"]', { property: "og:url" }, socialUrl);
+    if (config.canonical) upsertMeta('meta[property="og:url"]', { property: "og:url" }, config.canonical);
+    else document.head.querySelector('meta[property="og:url"]')?.remove();
     upsertMeta('meta[property="og:site_name"]', { property: "og:site_name" }, "Digital Phone Hub");
     upsertMeta('meta[property="og:image"]', { property: "og:image" }, `${SITE_URL}/brand/dph-storefront-sign-wide.webp`);
     upsertMeta('meta[name="twitter:card"]', { name: "twitter:card" }, "summary_large_image");

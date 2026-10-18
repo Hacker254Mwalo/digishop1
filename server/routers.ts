@@ -27,6 +27,7 @@ import {
   uploadProductImage,
 } from "./db";
 import { adminCopilot, productAdvisor, repairHelper } from "./ai";
+import { getGuestOrderPaymentStatus, startGuestOrderPayment } from "./_core/daraja";
 
 const customerInput = z.object({
   name: z.string().trim().min(2).max(160),
@@ -87,6 +88,8 @@ export const appRouter = router({
     createRepairRequest: publicProcedure.input(z.object({ submissionId: z.string().regex(/^[A-F0-9]{24}$/i).transform(value => value.toUpperCase()).optional(), customer: customerInput, device: deviceInput, issue: z.string().trim().min(5).max(4000), priority: z.enum(["low", "normal", "high", "urgent"]).optional() })).mutation(({ input }) => createRepairRequest(input)),
     createOrderRequest: publicProcedure.input(orderRequestInput).mutation(({ input }) => createOrderRequest(input)),
     getRepairStatus: publicProcedure.input(z.object({ reference: z.string().trim().toUpperCase().min(10).max(32).regex(/^DPH-REP-[A-Z0-9]{1,24}$/, "Enter a valid repair reference.") })).query(({ input }) => getRepairStatus(input.reference)),
+    getOrderPaymentStatus: publicProcedure.input(z.object({ reference: z.string().trim().toUpperCase().regex(/^DPH-ORD-[A-F0-9]{24}$/, "Enter a valid order reference.") })).query(({ input }) => getGuestOrderPaymentStatus(input.reference)),
+    startOrderPayment: publicProcedure.input(z.object({ reference: z.string().trim().toUpperCase().regex(/^DPH-ORD-[A-F0-9]{24}$/, "Enter a valid order reference."), idempotencyKey: z.string().regex(/^[A-F0-9]{24}$/i).transform(value => value.toUpperCase()) }).strict()).mutation(({ input }) => startGuestOrderPayment(input)),
   }),
   admin: router({
     summary: adminProcedure.query(() => getDashboardSummary()),

@@ -14,4 +14,11 @@ export const ENV = {
   supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY ?? "",
   supabaseSecretKey: process.env.SUPABASE_SECRET_KEY ?? "",
   supabaseJwksUrl: process.env.SUPABASE_JWKS_URL ?? "",
+  mpesaDarajaEnvironment: process.env.MPESA_DARAJA_ENV ?? "",
+  mpesaDarajaConsumerKey: process.env.MPESA_DARAJA_CONSUMER_KEY ?? "",
+  mpesaDarajaConsumerSecret: process.env.MPESA_DARAJA_CONSUMER_SECRET ?? "",
+  mpesaDarajaShortcode: process.env.MPESA_DARAJA_SHORTCODE ?? "",
+  mpesaDarajaPasskey: process.env.MPESA_DARAJA_PASSKEY ?? "",
+  mpesaDarajaTransactionType: process.env.MPESA_DARAJA_TRANSACTION_TYPE ?? "",
+  mpesaDarajaCallbackUrl: process.env.MPESA_DARAJA_CALLBACK_URL ?? "",
 };
