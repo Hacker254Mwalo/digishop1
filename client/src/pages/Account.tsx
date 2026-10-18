@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock3, KeyRound, Loader2, LogOut, Package, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, CheckCircle2, KeyRound, Loader2, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "wouter";
@@ -318,24 +318,13 @@ export default function Account() {
 
   return (
     <PublicShell>
-      <main id="main-content" className="min-h-[65vh] bg-[#f6f3ee] px-4 pb-24 pt-8 text-[#202a30] sm:px-6 sm:pb-12 lg:px-8">
-        <div className="mx-auto max-w-6xl">
-          <Link href="/spares" className="inline-flex items-center gap-2 text-sm font-bold text-[#56636a] transition hover:text-[#a93823]"><ArrowLeft className="h-4 w-4" />Back to parts &amp; accessories</Link>
-          <div className="mt-6 grid gap-7 lg:grid-cols-[.78fr_1.22fr] lg:items-start">
-            <section className="rounded-[1.75rem] bg-[#202a30] p-6 text-white shadow-xl shadow-[#202a30]/[.12] sm:p-8">
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10 text-[#f6c36a]"><ShieldCheck className="h-6 w-6" /></span>
-              <p className="mt-6 text-[10px] font-extrabold uppercase tracking-[.22em] text-[#f6c36a]">Optional customer account</p>
-              <h1 className="mt-3 text-3xl font-black leading-tight tracking-[-.05em] sm:text-4xl">Keep your requests together.</h1>
-              <p className="mt-4 text-sm leading-7 text-[#e0e5e6]">Use a username and your verified phone number to sign in. We send a one-time code by SMS; no password or M-PESA PIN is collected.</p>
-              <div className="mt-6 space-y-3 border-t border-white/10 pt-5 text-sm leading-6 text-[#e0e5e6]">
-                <p className="flex gap-3"><CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-[#79d5c4]" />Save new item requests to your account history when you order with the verified account phone.</p>
-                <p className="flex gap-3"><ShieldCheck className="mt-1 h-4 w-4 shrink-0 text-[#79d5c4]" />Older guest requests are not pulled into an account just because a phone number matches.</p>
-                <p className="flex gap-3"><Package className="mt-1 h-4 w-4 shrink-0 text-[#79d5c4]" />Sign-up is optional. You can request parts and check an order as a guest.</p>
-              </div>
-              <Link href="/spares" className="mt-7 inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-3 text-sm font-extrabold text-white transition hover:bg-white/10">Continue as a guest <ArrowRight className="h-4 w-4" /></Link>
-            </section>
-
-            <section className="rounded-[1.75rem] border border-[#d9d2c8] bg-white p-6 shadow-xl shadow-[#202a30]/[.06] sm:p-8">
+      <main id="main-content" className="min-h-[65vh] bg-[#f6f3ee] px-4 pb-24 pt-7 text-[#202a30] sm:px-6 sm:pb-12">
+        <div className="mx-auto max-w-xl">
+          <p className="text-xs font-extrabold uppercase tracking-[.16em] text-[#205c52]">Digital Phone Hub</p>
+          <h1 className="mt-2 text-3xl font-black tracking-[-.04em]">Customer account</h1>
+          <Link href="/spares" className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#56636a] transition hover:text-[#a93823]">Continue as a guest <ArrowRight className="h-4 w-4" /></Link>
+          <div className="mt-5">
+            <section className="rounded-2xl border border-[#d9d2c8] bg-white p-5 shadow-lg shadow-[#202a30]/[.06] sm:p-7">
               {profile ? (
                 <>
                   <div className="flex flex-col justify-between gap-4 border-b border-[#e6e0d8] pb-5 sm:flex-row sm:items-center">
@@ -349,8 +338,6 @@ export default function Account() {
                 <div className="py-4"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff1e7] text-[#a93823]"><ShieldCheck className="h-6 w-6" /></span><h2 className="mt-5 text-2xl font-black tracking-[-.04em]">Account setup is not ready</h2><p className="mt-3 text-sm leading-7 text-[#56636a]">Your phone session could not load an account profile. The account database migration may still need to be applied. Sign out to keep using guest ordering; no guest request is blocked.</p><button type="button" onClick={signOut} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#202a30] px-4 py-3 text-sm font-extrabold text-white"><LogOut className="h-4 w-4" />Sign out and continue as guest</button></div>
               ) : authLoading || (sessionReady && profileQuery.isLoading) ? (
                 <div className="grid min-h-56 place-items-center gap-3 text-sm font-semibold text-[#56636a]" role="status"><Loader2 className="h-6 w-6 animate-spin text-[#d94b2b]" />Loading account…</div>
-              ) : !authClient ? (
-                <div className="py-4"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff1e7] text-[#a93823]"><KeyRound className="h-6 w-6" /></span><h2 className="mt-5 text-2xl font-black tracking-[-.04em]">Phone sign-in is not enabled yet</h2><p className="mt-3 text-sm leading-7 text-[#56636a]">The shop is completing secure SMS and account-database setup before enabling customer login. You can still request parts as a guest or contact the service desk.</p><Link href="/spares" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#d94b2b] px-4 py-3 text-sm font-extrabold text-white">Continue to parts <ArrowRight className="h-4 w-4" /></Link></div>
               ) : stage === "code" ? (
                 <>
                   <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#e4f3ed] text-[#205c52]"><KeyRound className="h-6 w-6" /></span>
@@ -381,11 +368,9 @@ export default function Account() {
                 </>
               ) : (
                 <>
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff1e7] text-[#a93823]"><UserRound className="h-6 w-6" /></span>
-                  <p className="mt-5 text-[10px] font-extrabold uppercase tracking-[.2em] text-[#a93823]">Customer account</p>
-                  <h2 className="mt-2 text-2xl font-black tracking-[-.04em]">{mode === "signup" ? "Create your account" : "Sign in"}</h2>
-                  <p className="mt-2 text-sm leading-6 text-[#56636a]">Enter your username and phone. We send a one-time SMS code to the phone first, then match the username after verification.</p>
+                  <h2 className="mt-2 text-2xl font-black tracking-[-.04em]">{mode === "signup" ? "Create account" : "Sign in"}</h2>
                   <div className="mt-5 grid grid-cols-2 rounded-xl border border-[#d9d2c8] bg-[#f6f3ee] p-1" role="group" aria-label="Account action"><button type="button" disabled={busy} aria-pressed={mode === "signup"} onClick={() => { setMode("signup"); setErrorMessage(""); setInfoMessage(""); }} className={`rounded-lg px-3 py-2.5 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-60 ${mode === "signup" ? "bg-white text-[#202a30] shadow-sm" : "text-[#56636a]"}`}>Create account</button><button type="button" disabled={busy} aria-pressed={mode === "login"} onClick={() => { setMode("login"); setErrorMessage(""); setInfoMessage(""); }} className={`rounded-lg px-3 py-2.5 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-60 ${mode === "login" ? "bg-white text-[#202a30] shadow-sm" : "text-[#56636a]"}`}>Sign in</button></div>
+                  {!authClient && <p className="mt-4 rounded-xl border border-[#d94b2b]/20 bg-[#fff1e7] p-3 text-sm leading-5 text-[#87331f]" role="status">SMS sign-in is not enabled yet. Continue as a guest or call 0718 114 009.</p>}
                   <form className="mt-5 space-y-4" onSubmit={sendCode}>
                     <label className="block text-sm font-bold text-[#202a30]">Username<input autoComplete="username" maxLength={24} value={username} onChange={event => setUsername(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-[#cfc5b8] bg-white px-4 text-sm text-[#202a30] outline-none focus:border-[#b53d25] focus:ring-4 focus:ring-[#d94b2b]/10" placeholder="3–24 letters, numbers or _" required /></label>
                     <label className="block text-sm font-bold text-[#202a30]">Phone number<input autoComplete="tel" type="tel" value={phone} onChange={event => setPhone(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-[#cfc5b8] bg-white px-4 text-sm text-[#202a30] outline-none focus:border-[#b53d25] focus:ring-4 focus:ring-[#d94b2b]/10" placeholder="0718 114 009" required /></label>
@@ -393,7 +378,6 @@ export default function Account() {
                     {infoMessage && <p className="rounded-xl border border-[#28766b]/20 bg-[#e4f3ed] p-3 text-sm leading-6 text-[#205c52]" role="status">{infoMessage}</p>}
                     <button type="submit" disabled={busy || cooldown > 0 || authLoading || !authClient} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#d94b2b] px-5 text-sm font-extrabold text-white transition hover:bg-[#b53d25] disabled:cursor-not-allowed disabled:opacity-60">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}{busy ? "Requesting code…" : cooldown > 0 ? `Wait ${cooldown}s before requesting a code` : "Send verification code"}</button>
                   </form>
-                  <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-[#69747b]"><Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" />SMS availability depends on the shop's phone-auth setup. If you cannot receive a code, use the guest parts request or call the service desk.</p>
                 </>
               )}
             </section>

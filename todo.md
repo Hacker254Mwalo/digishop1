@@ -11,12 +11,13 @@
 
 ## Optional customer login and sign-up — current follow-up
 
-- [x] Implemented `/account` with a username and Kenyan phone number, real Supabase Auth SMS one-time-code sign-up/sign-in, and a separate customer session that does not alter owner/admin login.
+- [x] Implemented `/account` with a username and Kenyan phone number, Supabase Auth SMS one-time-code sign-up/sign-in support, and a separate customer session that does not alter owner/admin login. Production code delivery remains disabled until real SMS setup is verified.
+- [x] Replaced the long two-panel introduction with one compact mobile-first sign-in/create-account form shown immediately. When real phone auth is unavailable, the fields remain visible, code sending is disabled, the reason is brief, and the guest path stays clear.
 - [x] Implemented private account profile and account-linked item-request history. Only server-verified, phone-confirmed Supabase identities can use customer account procedures.
 - [x] Kept guest purchase/request flows optional. New requests link only when the submitted number matches the verified account phone; older guest requests are never auto-claimed. If account storage is missing, the order request falls back to guest mode.
-- [x] Added an additive migration, private route headers/metadata, regression coverage and [`customer-account-setup.md`](docs/customer-account-setup.md).
+- [x] Added an additive migration, private route headers/metadata, regression coverage and [`customer-account-setup.md`](docs/customer-account-setup.md). Migration `003_customer_accounts.sql` is now applied to the connected Supabase project; verify it matches Vercel's configured database before enabling sign-in.
 - [x] Committed and pushed as `23ff46cf33a4ec6d3c3a029d5b3f6b8ce762fbd8`; Vercel deployed it to Production. Verified `/account` returns HTTP 200 with noindex, no canonical/social URL, no-referrer and no-store protections, and is absent from the sitemap. The auth-config endpoint returned `{"enabled":false}`; no SMS was requested.
-- [ ] Before enabling customer OTP in production, apply `supabase/migrations/003_customer_accounts.sql`, configure a real Supabase Auth phone/SMS provider, set `CUSTOMER_ACCOUNTS_ENABLED=true` only on an isolated Vercel Preview/Supabase project, and verify the complete flow there. Keep the Production flag disabled until Preview passes and the owner approves activation. No simulated OTP may be presented as production authentication.
+- [ ] Configure and verify a real Supabase Auth phone/SMS provider in an isolated Preview project, apply migration 003 there, and set `CUSTOMER_ACCOUNTS_ENABLED=true` only in that Preview environment. Production currently lacks the feature flag and the live config endpoint returns `{"enabled":false}`. Keep Production disabled until Preview passes and the owner approves activation. No simulated OTP may be presented as production authentication.
 
 ## Owner prerequisites and remaining operational work
 

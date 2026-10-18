@@ -64,7 +64,7 @@ const pages = [
     keywords: "Digital Phone Hub customer account, private order history",
     robots: "noindex,nofollow",
     canonical: "",
-    body: `<main id="main-content"><h1>Optional customer account</h1><p>Sign up with a username and verified Kenyan phone number to keep new item requests together. Phone verification uses a one-time SMS code.</p><p>An account is optional. You can request parts and check an order as a guest.</p><p><a href="/spares">Continue to parts and accessories</a> · <a href="tel:+254718114009">Call 0718 114 009</a></p></main>`,
+    body: `<main id="main-content"><h1>Customer account</h1><p>Sign in or create an account with a username and Kenyan phone number.</p><p>Phone sign-in is unavailable until SMS setup is complete. Guest requests remain available.</p><p><a href="/spares">Continue as a guest</a> · <a href="tel:+254718114009">Call 0718 114 009</a></p></main>`,
   },
   {
     path: "/owner-login",
