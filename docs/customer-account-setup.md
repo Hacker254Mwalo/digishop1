@@ -1,34 +1,40 @@
-# Optional customer accounts — Digital Phone Hub
+# Customer accounts and catalogue readiness — Digital Phone Hub
 
 ## Current status
 
-`/account` now presents the sign-in and create-account form directly. The form accepts a username and Kenyan phone number, but **Send verification code is disabled in Production**. The site does not fake SMS delivery or create a session without verified Supabase Auth.
+The account flow is designed for optional username-and-password access. Signup does not send an SMS. Supabase Auth stores and verifies the password; the application stores the username and normalized Kenyan phone number in `customerAccounts`. Phone ownership is **not verified**, and the phone number must not be described or used as verified identity data.
 
-The additive migration `003_customer_accounts.sql` has been applied to the connected Supabase project containing the shop's customer and order tables. Confirm that this is the same project referenced by Vercel before enabling the feature. Vercel does not currently list `CUSTOMER_ACCOUNTS_ENABLED`; the live configuration endpoint returned `{"enabled":false}`. Phone/SMS provider readiness has not been verified. The feature must stay disabled until a real SMS provider is configured and the flow is tested safely in an isolated Preview project.
+The implementation uses an internal, non-deliverable Supabase Auth email identifier derived from the username. It is not a customer email address and must never be shown as one. The server creates this Auth identity with the password through the service-role API, then creates the account profile. The service-role key remains server-only. Password reset by phone or email is not available; customers who forget the password will need a future recovery process that does not assume phone ownership.
 
-Guests can still request parts and track orders without creating an account.
+Migration `003_customer_accounts.sql` is present in the selected Supabase project. The product-catalog migration was applied there as `product_catalog_gallery_contract` on 20 October 2026. Signup protection was applied as `customer_signup_throttle`; it stores only keyed hashes and limits account attempts to 10 per client address and 3 per normalized phone number per hour. The catalog migration adds the condition and five-image gallery fields, widens category support, backfills existing primary photos, and creates the serialized image-append function. The selected project currently has no product rows, so category behavior is covered by code tests rather than a production test listing.
 
-## Owner setup
+The live account configuration endpoint currently returns `{"enabled":false}`. Keep customer accounts disabled until the owner confirms that Vercel's `SUPABASE_URL` points to the selected project and completes the provider checks below. Guest ordering and repair requests remain available.
 
-1. **Confirm the database target.** Verify that the Supabase project receiving migration 003 is the same project referenced by the app's Vercel `SUPABASE_URL`. Apply migration 003 separately to any nonproduction Preview project used for testing. Do not copy production customer data into Preview.
-2. **Configure real phone verification.** Enable the Supabase Auth phone provider, choose and configure a supported production SMS provider, sender identity and rate limits, and require phone confirmation. Configure/test this in Preview first. Never use fake, shared or simulated OTPs.
-3. **Keep server keys private.** Vercel must have the intended project's `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and server-only `SUPABASE_SECRET_KEY`. The browser receives only the URL and publishable key from a no-store endpoint; never expose the secret key in a `VITE_` variable, browser bundle, public repo or customer response.
-4. **Test in isolation.** Use a separate Preview Supabase project and real SMS provider configuration. Set `CUSTOMER_ACCOUNTS_ENABLED=true` only on that Preview deployment after its migration and keys are ready. Confirm a real code arrives, verification succeeds, profile creation works, sign-in works, and account-linked requests appear only for that account. Do not send unsolicited messages to customers.
-5. **Enable Production only after approval.** Leave `CUSTOMER_ACCOUNTS_ENABLED` unset or `false` in Production until Preview passes and the owner explicitly approves activation. Recheck the live endpoint returns `{"enabled":true}` only when every server/database gate is ready. Redeploy after changing environment variables.
+## Enablement checklist
 
-## What customers can do
+1. **Confirm the database target.** In Vercel, confirm the server's `SUPABASE_URL` matches the project where migrations 003, 004, and 005 are recorded. Do not copy production customer data to a Preview project. Apply the tracked migrations to a separate Preview database before testing there.
+2. **Enable Supabase password auth.** Enable the Supabase Email/password provider so the client can sign in with a password. No SMS provider is required for this flow. The application uses a reserved `.invalid` internal identifier, not an email address; do not configure customer email delivery or password reset around it.
+3. **Keep server keys private.** Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SECRET_KEY` on the intended Vercel deployment. Never expose the secret key through a `VITE_` variable, browser bundle, public repository, or customer response.
+4. **Test in isolation.** In a separate Preview Supabase project, apply the migrations, configure password auth, and set `CUSTOMER_ACCOUNTS_ENABLED=true` only on that Preview deployment. Test account creation, sign-in, private order history, sign-out, duplicate usernames/phone numbers, rate limits, and guest ordering. Use test customer data only.
+5. **Enable Production deliberately.** Leave `CUSTOMER_ACCOUNTS_ENABLED` unset or `false` in Production until Preview passes and the owner approves activation. After enabling it, redeploy and check that `/api/customer-auth/config` reports `{"enabled":true}`. If any required key or schema check fails, the account feature should remain closed while guest flows continue.
 
-- Create an account with a username and Kenyan phone number, then verify phone ownership by SMS code.
-- Sign in later with the same username and verified phone number.
-- View only item requests created while signed in and submitted with the verified account phone.
-- Continue as a guest if they do not want an account.
+## Customer behavior and privacy
 
-No password, payment PIN or card details are collected. Customer authentication is separate from owner/admin authentication. The account profile is protected by RLS; only the server, after validating the Supabase Auth token and confirmed phone, accesses it. Existing guest requests are never auto-claimed by phone-number match. If a customer submits a different contact number, that request stays a guest request.
+- Customers may create an account with a username, Kenyan mobile number, and a password of at least 12 characters. No SMS code is sent.
+- The phone number is stored as an account contact number but is not verified. Signing up does not prove control of that number.
+- Customers sign in with their username and password. The password is handled by Supabase Auth and is not stored in the shop's `customerAccounts` table.
+- Only requests created while signed in and submitted with the same account phone number appear in that account's history. Existing guest requests are never automatically claimed by phone-number match.
+- Guest checkout and repair requests remain available without an account.
+- Signup throttles store keyed hashes, not raw phone numbers or addresses. The database function and table are inaccessible to anonymous and authenticated browser roles; only the server service role can use them.
+- Customer account data stays behind Supabase token validation and the account-profile lookup. Private account responses are marked `no-store`. Customer and owner authentication remain separate.
+- No payment PIN, card details, SMS code, or real email address is requested or stored by the customer account form.
 
 ## Troubleshooting
 
-- **The code button is disabled or sign-in is unavailable:** confirm `CUSTOMER_ACCOUNTS_ENABLED=true` only in the intended Preview environment, verify the project URL matches the database where migration 003 was applied, ensure the server has its required Supabase keys, and check that the database exposes `customerAccounts` plus `orderRequests.accountUserId`. The configuration endpoint intentionally returns no browser keys while any gate is closed.
-- **Code request fails:** verify the Supabase phone provider, SMS-provider credentials, sender/delivery settings, phone format and provider rate limits. The website does not claim an SMS was sent when the provider rejects it.
-- **Profile cannot be saved after phone verification:** confirm migration 003 is applied to the same Supabase project used by the server.
-- **A new request is missing from account history:** confirm the customer was signed in, the profile exists, and the submitted phone matches the verified account phone. Guest and older requests are never attached automatically.
-- **Never ask a customer to share an SMS code or M-PESA PIN.**
+- **Account setup is unavailable:** confirm `CUSTOMER_ACCOUNTS_ENABLED=true` only in the intended Preview/approved Production deployment, verify Supabase URL and server keys, and check the readiness endpoint. The endpoint intentionally returns no browser auth keys while a gate is closed.
+- **Signup is rejected:** check that Supabase password auth is enabled, the phone number is valid, the password has at least 12 characters, and the username and phone number are not already registered.
+- **Signup is temporarily rate-limited:** wait for the one-hour window to expire; the current thresholds are 10 attempts per client address and 3 per phone number.
+- **Signup succeeds but sign-in fails:** confirm the Supabase Email/password provider accepts password sign-in and that the account row was saved. Do not ask customers to use the hidden internal identifier as an email address.
+- **A request is missing from account history:** confirm the customer was signed in when placing it and used the same phone number stored on the account. Guest and older requests are not attached automatically.
+- **Customer forgot a password:** do not send a reset link to the internal `.invalid` identifier and do not treat the stored phone as verified. Keep guest service available until a safe recovery process is implemented.
+- **Never ask a customer to share an M-PESA PIN, password, or one-time code.**

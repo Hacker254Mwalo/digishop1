@@ -9,15 +9,22 @@
 - [x] Integrated real Daraja STK initiation and provider-query reconciliation code with database-level payment safeguards. It fails closed until merchant credentials and the full payment migration are configured; Production rejects sandbox mode.
 - [x] Deployed and verified the order-status and repair-status routes in production. No real customer order or M-PESA prompt was created during QA.
 
-## Optional customer login and sign-up — current follow-up
+## Admin product upload → customer shop
 
-- [x] Implemented `/account` with a username and Kenyan phone number, Supabase Auth SMS one-time-code sign-up/sign-in support, and a separate customer session that does not alter owner/admin login. Production code delivery remains disabled until real SMS setup is verified.
-- [x] Replaced the long two-panel introduction with one compact mobile-first sign-in/create-account form shown immediately. When real phone auth is unavailable, the fields remain visible, code sending is disabled, the reason is brief, and the guest path stays clear.
-- [x] Implemented private account profile and account-linked item-request history. Only server-verified, phone-confirmed Supabase identities can use customer account procedures.
-- [x] Kept guest purchase/request flows optional. New requests link only when the submitted number matches the verified account phone; older guest requests are never auto-claimed. If account storage is missing, the order request falls back to guest mode.
-- [x] Added an additive migration, private route headers/metadata, regression coverage and [`customer-account-setup.md`](docs/customer-account-setup.md). Migration `003_customer_accounts.sql` is now applied to the connected Supabase project; verify it matches Vercel's configured database before enabling sign-in.
-- [x] Final account-screen commit `13f3fbf874166ffd0e4e3780e8abb1c4feb850c9` is deployed to Production. Live `/account` shows Create account/Sign in, username/phone fields, a guest path and a disabled code-send button; the route is noindex, has no canonical/social URL, uses no-referrer/no-store and is absent from the sitemap. The auth-config endpoint returned `{"enabled":false}`; no SMS was requested.
-- [ ] Configure and verify a real Supabase Auth phone/SMS provider in an isolated Preview project, apply migration 003 there, and set `CUSTOMER_ACCOUNTS_ENABLED=true` only in that Preview environment. Production currently lacks the feature flag and the live config endpoint returns `{"enabled":false}`. Keep Production disabled until Preview passes and the owner approves activation. No simulated OTP may be presented as production authentication.
+- [x] Admin product create/edit and shop-card rendering use the same fields: title, KES price or honest quote state, category, structured condition, up to five uploaded photos, stock status and description. New physical listings require an owner-selected condition; missing legacy condition is shown as not stated. No mock inventory or fake defaults are added.
+- [x] Shop filter options derive from published product categories, so newly entered categories such as iPhone, Samsung and Accessories appear without a second hard-coded filter list. Unit tests cover capitalization, aliases and duplicate categories.
+- [x] Product photo bytes, stock and price inputs are validated. New listings remain hidden until selected photos upload successfully; customer stock labels and server request rules share one availability contract.
+- [ ] Run a true Admin → Shop upload in an isolated Preview database with owner-approved test products for iPhone and Samsung, then verify the cards and automatic filters in a browser. The selected production catalogue currently has zero products, so no synthetic production listing was created for QA.
+
+## Optional customer login and sign-up
+
+- [x] Implemented optional username/password sign-up and sign-in without SMS. The Kenyan phone number is stored as an unverified contact number, never treated as identity proof; passwords remain in Supabase Auth.
+- [x] Kept a compact account form directly accessible, with guest ordering still available when the account gate is closed.
+- [x] Implemented private account profile and account-linked request history behind validated Supabase sessions and the account-profile lookup; private responses are no-store and customer auth remains separate from owner/admin auth.
+- [x] Added signup throttles keyed by hashes (10 attempts per client address and 3 per normalized phone number per hour), cross-origin protection, regression tests and [`customer-account-setup.md`](docs/customer-account-setup.md).
+- [x] Applied Supabase migrations `003_customer_accounts`, `product_catalog_gallery_contract` (catalogue/gallery) and `customer_signup_throttle` to the selected project. Confirm Vercel's `SUPABASE_URL` points to this project before enabling the feature.
+- [x] Live `/api/customer-auth/config` returned `{"enabled":false}` on 20 October. Production account access remains fail-closed; the new SMS-free code must be deployed and Preview-tested before any production activation.
+- [ ] In a separate Preview project, configure Supabase Email/password auth, apply migrations 003–005, set `CUSTOMER_ACCOUNTS_ENABLED=true` only in Preview, and test signup, sign-in, private request history, duplicate details, rate limits, sign-out and guest ordering. Keep Production disabled until Preview passes and the owner approves activation.
 
 ## Owner prerequisites and remaining operational work
 

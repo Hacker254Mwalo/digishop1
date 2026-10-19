@@ -31,16 +31,66 @@ import {
   X,
   Trash2,
   UploadCloud,
-  WandSparkles,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import AdminCopilot from "@/components/AdminCopilot";
+import {
+  deriveProductAvailability,
+  getProductCategoryOptions,
+  getProductImageUrls,
+  normalizeProductCategory,
+  productAvailabilityLabel,
+  productCategoryKey,
+  PRODUCT_CATEGORY_SUGGESTIONS,
+  PRODUCT_CONDITIONS,
+  PRODUCT_CONDITION_LABELS,
+  type CatalogProduct,
+  type ProductCondition,
+  type ProductType,
+} from "@shared/productCatalog";
 
 type Section = "overview" | "repairs" | "inventory" | "orders" | "customers" | "team";
 const dashboardSections = ["overview", "repairs", "inventory", "orders", "customers", "team"] as const satisfies readonly Section[];
 const repairStatuses = ["received", "diagnostics", "awaiting_approval", "in_repair", "ready", "collected", "cancelled"] as const;
 const orderStatuses = ["new", "confirmed", "fulfilled", "cancelled"] as const;
 const productTypeLabels: Record<string, string> = { part: "Part", device: "Device", accessory: "Accessory", service: "Service" };
+
+type ProductFormState = {
+  sku: string;
+  name: string;
+  category: string;
+  productType: string;
+  condition: string;
+  description: string;
+  compatibility: string;
+  price: string;
+  stock: string;
+  reorderLevel: string;
+  availabilityMode: "auto" | "out_of_stock" | "by_order";
+  externalUrl: string;
+};
+
+const createEmptyProductForm = (): ProductFormState => ({
+  sku: "", name: "", category: "", productType: "", condition: "", description: "",
+  compatibility: "", price: "", stock: "", reorderLevel: "2", availabilityMode: "auto", externalUrl: "",
+});
+
+type ProductUpsertPayload = {
+  id?: number;
+  sku?: string;
+  name: string;
+  category: string;
+  productType: ProductType;
+  condition: ProductCondition;
+  description?: string;
+  compatibility?: string;
+  imageUrl?: string;
+  externalUrl?: string;
+  price: number;
+  stock: number;
+  reorderLevel?: number;
+  availability?: "by_order" | "out_of_stock";
+};
 
 function formatDate(value: Date | string | null | undefined) {
   if (!value) return "—";
@@ -72,75 +122,11 @@ function readImageAsBase64(file: File) {
   });
 }
 
-function validateProductImage(file: File | undefined) {
-  if (!file) return false;
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-    window.alert("Please choose a JPG, PNG or WebP image.");
-    return false;
-  }
-  if (file.size > 6 * 1024 * 1024) {
-    window.alert("Product images must be 6 MB or smaller.");
-    return false;
-  }
-  return true;
-}
-
-async function prepareProductImage(file: File) {
-  const { removeBackground } = await import("@imgly/background-removal");
-  const cutout = await removeBackground(file);
-  const bitmap = await createImageBitmap(cutout);
-  const source = document.createElement("canvas");
-  source.width = bitmap.width;
-  source.height = bitmap.height;
-  const sourceContext = source.getContext("2d");
-  if (!sourceContext) throw new Error("Could not prepare the product image");
-  sourceContext.drawImage(bitmap, 0, 0);
-  const pixels = sourceContext.getImageData(0, 0, source.width, source.height).data;
-  let minX = source.width;
-  let minY = source.height;
-  let maxX = 0;
-  let maxY = 0;
-  for (let y = 0; y < source.height; y += 2) {
-    for (let x = 0; x < source.width; x += 2) {
-      if (pixels[(y * source.width + x) * 4 + 3] > 18) {
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-      }
-    }
-  }
-  if (maxX <= minX || maxY <= minY) {
-    minX = 0; minY = 0; maxX = source.width; maxY = source.height;
-  }
-  const cropWidth = maxX - minX;
-  const cropHeight = maxY - minY;
-  const canvas = document.createElement("canvas");
-  canvas.width = 1200;
-  canvas.height = 900;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Could not create the product canvas");
-  const background = context.createLinearGradient(0, 0, 1200, 900);
-  background.addColorStop(0, "#ffffff");
-  background.addColorStop(1, "#f1f5f9");
-  context.fillStyle = background;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  const maxDrawWidth = 930;
-  const maxDrawHeight = 660;
-  const scale = Math.min(maxDrawWidth / cropWidth, maxDrawHeight / cropHeight);
-  const drawWidth = cropWidth * scale;
-  const drawHeight = cropHeight * scale;
-  const drawX = (canvas.width - drawWidth) / 2;
-  const drawY = (canvas.height - drawHeight) / 2 - 18;
-  context.save();
-  context.filter = "brightness(1.08) contrast(1.06) saturate(1.04)";
-  context.shadowColor = "rgba(15, 23, 42, .18)";
-  context.shadowBlur = 28;
-  context.shadowOffsetY = 16;
-  context.drawImage(source, minX, minY, cropWidth, cropHeight, drawX, drawY, drawWidth, drawHeight);
-  context.restore();
-  const output = await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Could not export the product image")), "image/jpeg", 0.9));
-  return new File([output], `${file.name.replace(/\.[^.]+$/, "")}-ready.jpg`, { type: "image/jpeg" });
+function productImageError(file: File | undefined): string | null {
+  if (!file) return "Choose a JPG, PNG or WebP image.";
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return "Use a JPG, PNG or WebP image.";
+  if (file.size > 6 * 1024 * 1024) return "Each product photo must be 6 MB or smaller.";
+  return null;
 }
 
 function Metric({ label, value, hint, icon: Icon, tone }: { label: string; value: number; hint: string; icon: typeof Activity; tone: string }) {
@@ -185,8 +171,10 @@ export default function AdminDashboard() {
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryFilter, setInventoryFilter] = useState("all");
   const [showProductForm, setShowProductForm] = useState(false);
-  const [productForm, setProductForm] = useState({ sku: "", name: "", category: "phone_screen", productType: "part", description: "", compatibility: "", price: "", stock: "", reorderLevel: "2", externalUrl: "" });
-  const [productImage, setProductImage] = useState<File | null>(null);
+  const [productForm, setProductForm] = useState<ProductFormState>(createEmptyProductForm);
+  const [productImages, setProductImages] = useState<File[]>([]);
+  const [pendingProductId, setPendingProductId] = useState<number | null>(null);
+  const [uploadedPhotoCount, setUploadedPhotoCount] = useState(0);
   const [noteDrafts, setNoteDrafts] = useState<Record<number, string>>({});
   const [historyFor, setHistoryFor] = useState<{ customerId: number; deviceId: number } | null>(null);
   const [editingTechnicianId, setEditingTechnicianId] = useState<number | null>(null);
@@ -203,12 +191,14 @@ export default function AdminDashboard() {
   const customers = trpc.admin.customers.useQuery(undefined, { enabled: isAdmin });
   const technicians = trpc.admin.technicians.useQuery(undefined, { enabled: isAdmin });
   const allTechnicians = trpc.admin.allTechnicians.useQuery(undefined, { enabled: isAdmin });
+  const productCategories = useMemo(() => getProductCategoryOptions(products.data ?? []), [products.data]);
+  const categorySuggestions = useMemo(() => Array.from(new Set([...PRODUCT_CATEGORY_SUGGESTIONS, ...productCategories])), [productCategories]);
   const updateRepair = trpc.admin.updateRepair.useMutation({ onSuccess: () => utils.admin.repairs.invalidate().then(() => utils.admin.summary.invalidate()) });
   const addNote = trpc.admin.addNote.useMutation({ onSuccess: (_, variables) => { setNoteDrafts(current => ({ ...current, [variables.ticketId]: "" })); return utils.admin.repairs.invalidate(); } });
-  const upsertProduct = trpc.admin.upsertProduct.useMutation({ onSuccess: () => Promise.all([utils.admin.products.invalidate(), utils.admin.summary.invalidate()]) });
-  const uploadProductImage = trpc.admin.uploadProductImage.useMutation({ onSuccess: () => utils.admin.products.invalidate() });
-  const removeProduct = trpc.admin.removeProduct.useMutation({ onSuccess: () => Promise.all([utils.admin.products.invalidate(), utils.admin.summary.invalidate()]) });
-  const setProductActive = trpc.admin.setProductActive.useMutation({ onSuccess: () => Promise.all([utils.admin.products.invalidate(), utils.admin.summary.invalidate()]) });
+  const upsertProduct = trpc.admin.upsertProduct.useMutation({ onSuccess: () => Promise.all([utils.admin.products.invalidate(), utils.admin.summary.invalidate(), utils.public.products.invalidate()]) });
+  const uploadProductImage = trpc.admin.uploadProductImage.useMutation({ onSuccess: () => Promise.all([utils.admin.products.invalidate(), utils.public.products.invalidate()]) });
+  const removeProduct = trpc.admin.removeProduct.useMutation({ onSuccess: () => Promise.all([utils.admin.products.invalidate(), utils.admin.summary.invalidate(), utils.public.products.invalidate()]) });
+  const setProductActive = trpc.admin.setProductActive.useMutation({ onSuccess: () => Promise.all([utils.admin.products.invalidate(), utils.admin.summary.invalidate(), utils.public.products.invalidate()]) });
   const updateOrder = trpc.admin.updateOrder.useMutation({ onSuccess: () => Promise.all([utils.admin.orders.invalidate(), utils.admin.summary.invalidate()]) });
   const upsertTechnician = trpc.admin.upsertTechnician.useMutation({ onSuccess: () => { setEditingTechnicianId(null); setTechnicianForm({ name: "", phone: "", specialty: "" }); return Promise.all([utils.admin.allTechnicians.invalidate(), utils.admin.technicians.invalidate()]); } });
 
@@ -231,14 +221,19 @@ export default function AdminDashboard() {
   const filteredProducts = useMemo(() => {
     const query = inventorySearch.trim().toLowerCase();
     return products.data?.filter(product => {
-      const haystack = [product.sku, product.name, product.category, product.productType, product.compatibility].filter(Boolean).join(" ").toLowerCase();
+      const haystack = [product.sku, product.name, product.category, product.productType, product.condition, product.description, product.compatibility].filter(Boolean).join(" ").toLowerCase();
       const matchesSearch = !query || haystack.includes(query);
       const matchesVisibility = inventoryFilter !== "hidden" || product.active === false;
-      const matchesFilter = inventoryFilter === "all" || inventoryFilter === "hidden" || (inventoryFilter === "attention" ? product.active !== false && product.stock <= product.reorderLevel : product.category === inventoryFilter);
+      const availability = deriveProductAvailability({ stock: product.stock, reorderLevel: product.reorderLevel, productType: product.productType, availability: product.availability });
+      const matchesFilter = inventoryFilter === "all" || inventoryFilter === "hidden" || (inventoryFilter === "attention" ? product.active !== false && ["low_stock", "out_of_stock"].includes(availability) : inventoryFilter.startsWith("category:") && productCategoryKey(product.category) === inventoryFilter.slice("category:".length));
       return matchesSearch && matchesVisibility && matchesFilter;
     }).sort((a, b) => a.name.localeCompare(b.name)) ?? [];
   }, [products.data, inventorySearch, inventoryFilter]);
-  const lowStockProducts = useMemo(() => products.data?.filter(product => product.active !== false && product.stock <= product.reorderLevel) ?? [], [products.data]);
+  const lowStockProducts = useMemo(() => products.data?.filter(product => {
+    if (product.active === false) return false;
+    const availability = deriveProductAvailability({ stock: product.stock, reorderLevel: product.reorderLevel, productType: product.productType, availability: product.availability });
+    return availability === "low_stock" || availability === "out_of_stock";
+  }) ?? [], [products.data]);
   const historyInput = useMemo(() => historyFor ?? { customerId: 0, deviceId: 0 }, [historyFor]);
   const history = trpc.admin.customerHistory.useQuery(historyInput, { enabled: isAdmin && Boolean(historyFor) });
   const queryError = summary.error || repairs.error || products.error || orders.error || customers.error || technicians.error || allTechnicians.error || history.error;
@@ -257,22 +252,66 @@ export default function AdminDashboard() {
   }
 
   const refreshAll = () => Promise.all([summary.refetch(), repairs.refetch(), products.refetch(), orders.refetch(), customers.refetch(), technicians.refetch()]);
-  const resetProductForm = () => { setProductForm({ sku: "", name: "", category: "phone_screen", productType: "part", description: "", compatibility: "", price: "", stock: "", reorderLevel: "2", externalUrl: "" }); setProductImage(null); setShowProductForm(false); };
+  const resetProductForm = () => {
+    setProductForm(createEmptyProductForm());
+    setProductImages([]);
+    setPendingProductId(null);
+    setUploadedPhotoCount(0);
+    setShowProductForm(false);
+  };
   const saveNewProduct = async () => {
-    const result = await upsertProduct.mutateAsync({ sku: productForm.sku, name: productForm.name, category: productForm.category as "phone_screen" | "charging_port" | "battery" | "laptop_spare" | "accessory" | "other", productType: productForm.productType as "part" | "device" | "accessory" | "service", description: productForm.description, compatibility: productForm.compatibility, externalUrl: productForm.externalUrl || undefined, price: Number(productForm.price), stock: Number(productForm.stock), reorderLevel: Number(productForm.reorderLevel) });
-    if (productImage) {
-      const base64 = await readImageAsBase64(productImage);
-      await uploadProductImage.mutateAsync({ id: result.id, fileName: productImage.name, mimeType: productImage.type as "image/jpeg" | "image/png" | "image/webp", base64 });
+    const productType = productForm.productType as ProductType;
+    const condition = (productType === "service" ? "not_applicable" : productForm.condition) as ProductCondition;
+    const price = Number(productForm.price);
+    const stock = Number(productForm.stock);
+    const reorderLevel = Number(productForm.reorderLevel);
+    if (!Number.isSafeInteger(price) || !Number.isSafeInteger(stock) || !Number.isSafeInteger(reorderLevel)) throw new Error("Enter whole KES and stock values before saving.");
+    if (productType !== "service" && productImages.length === 0) throw new Error("Add at least one product photo before publishing.");
+
+    let productId = pendingProductId;
+    const result = await upsertProduct.mutateAsync({
+      ...(productId ? { id: productId } : {}),
+      sku: productForm.sku.trim() || undefined,
+      name: productForm.name.trim(),
+      category: normalizeProductCategory(productForm.category),
+      productType,
+      condition,
+      description: productForm.description.trim(),
+      compatibility: productForm.compatibility.trim() || undefined,
+      externalUrl: productForm.externalUrl.trim() || undefined,
+      price,
+      stock,
+      reorderLevel,
+      availability: productForm.availabilityMode === "auto" ? undefined : productForm.availabilityMode,
+    });
+    productId = result.id;
+    if (!pendingProductId) setPendingProductId(productId);
+
+    for (let index = uploadedPhotoCount; index < productImages.length; index += 1) {
+      const file = productImages[index];
+      try {
+        const base64 = await readImageAsBase64(file);
+        await uploadProductImage.mutateAsync({ id: productId, fileName: file.name, mimeType: file.type as "image/jpeg" | "image/png" | "image/webp", base64 });
+        setUploadedPhotoCount(index + 1);
+      } catch {
+        throw new Error("The product is saved as a hidden draft. A photo did not upload; retry to continue. It will not appear in the shop yet.");
+      }
+    }
+
+    try {
+      await setProductActive.mutateAsync({ id: productId, active: true });
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : "The product remains hidden. Complete the required details and try again.");
     }
     resetProductForm();
   };
-  const replaceProductImage = async (id: number, file: File) => {
+  const addProductImage = async (id: number, file: File) => {
     const base64 = await readImageAsBase64(file);
     await uploadProductImage.mutateAsync({ id, fileName: file.name, mimeType: file.type as "image/jpeg" | "image/png" | "image/webp", base64 });
   };
   const exportInventory = () => {
-    const rows = (products.data ?? []).map(product => [product.sku, product.name, product.category, product.productType, product.price, product.stock, product.reorderLevel, product.availability, product.compatibility ?? ""]);
-    const csv = [["SKU", "Name", "Category", "Type", "Price KES", "Stock", "Reorder level", "Availability", "Compatibility"], ...rows].map(row => row.map(value => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
+    const rows = (products.data ?? []).map(product => [product.sku, product.name, product.category, product.productType, product.condition ?? "", product.price, product.stock, product.reorderLevel, productAvailabilityLabel(product), getProductImageUrls(product).length, product.description ?? "", product.compatibility ?? ""]);
+    const csv = [["SKU", "Name", "Category", "Type", "Condition", "Price KES", "Stock", "Reorder level", "Availability", "Photo count", "Description", "Compatibility"], ...rows].map(row => row.map(value => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a"); link.href = url; link.download = `digital-phone-hub-inventory-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url);
   };
@@ -335,16 +374,16 @@ export default function AdminDashboard() {
 
       {section === "inventory" && (
         <section className="space-y-5">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Commerce desk</p><h2 className="mt-2 text-2xl font-semibold">Shop catalogue</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Add parts, laptops, accessories or services once and publish them to the customer shop. Use an external link when a device is sold through another website.</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => { setShowProductForm(true); setProductForm({ sku: "", name: "LCD screen replacement — add model", category: "phone_screen", productType: "part", description: "Screen/display assembly. Confirm the exact phone model and quality before fulfilment.", compatibility: "Add exact compatible model", price: "", stock: "", reorderLevel: "2", externalUrl: "" }); }}><Smartphone className="mr-2 h-4 w-4" />Start an LCD listing</Button><Button variant="outline" onClick={() => { setShowProductForm(true); setProductForm({ sku: "", name: "Laptop — add model", category: "other", productType: "device", description: "Add the exact laptop model, condition and fulfilment details.", compatibility: "Add brand and model", price: "", stock: "", reorderLevel: "2", externalUrl: "" }); }}><Laptop className="mr-2 h-4 w-4" />Start a laptop listing</Button><Button onClick={() => setShowProductForm(value => !value)}><Plus className="mr-2 h-4 w-4" />Add product</Button><Button variant="outline" onClick={exportInventory} disabled={!products.data?.length}><Download className="mr-2 h-4 w-4" />Export CSV</Button></div></div>
-          <div className="premium-panel flex flex-col gap-3 rounded-2xl p-3 sm:flex-row"><label className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input value={inventorySearch} onChange={event => setInventorySearch(event.target.value)} placeholder="Search SKU, product, model or category" className="pl-9" aria-label="Search inventory" /></label><select value={inventoryFilter} onChange={event => setInventoryFilter(event.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm sm:w-52" aria-label="Filter inventory"><option value="all">All listings</option><option value="attention">Stock attention</option><option value="phone_screen">Phone screens</option><option value="battery">Batteries</option><option value="charging_port">Charging</option><option value="laptop_spare">Laptop parts</option><option value="accessory">Accessories</option><option value="other">Other</option></select></div>
-          {showProductForm && <ProductForm form={productForm} setForm={setProductForm} image={productImage} setImage={setProductImage} onCancel={resetProductForm} onSubmit={saveNewProduct} busy={upsertProduct.isPending || uploadProductImage.isPending} />}
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Commerce desk</p><h2 className="mt-2 text-2xl font-semibold">Shop catalogue</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Create a listing once; its saved details and category appear in the customer shop automatically.</p></div><div className="flex flex-wrap gap-2"><Button onClick={() => { setProductForm(createEmptyProductForm()); setProductImages([]); setPendingProductId(null); setUploadedPhotoCount(0); setShowProductForm(true); }}><Plus className="mr-2 h-4 w-4" />Add product</Button><Button variant="outline" onClick={exportInventory} disabled={!products.data?.length}><Download className="mr-2 h-4 w-4" />Export CSV</Button></div></div>
+          <div className="premium-panel flex flex-col gap-3 rounded-2xl p-3 sm:flex-row"><label className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input value={inventorySearch} onChange={event => setInventorySearch(event.target.value)} placeholder="Search SKU, product, model or category" className="pl-9" aria-label="Search inventory" /></label><select value={inventoryFilter} onChange={event => setInventoryFilter(event.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm sm:w-56" aria-label="Filter inventory"><option value="all">All listings</option><option value="attention">Stock attention</option><option value="hidden">Hidden drafts</option>{productCategories.map(label => <option key={label} value={`category:${productCategoryKey(label)}`}>{label}</option>)}</select></div>
+          {showProductForm && <ProductForm form={productForm} setForm={setProductForm} images={productImages} setImages={setProductImages} pendingProductId={pendingProductId} uploadedPhotoCount={uploadedPhotoCount} categorySuggestions={categorySuggestions} onCancel={() => { if (pendingProductId && !window.confirm("This listing is saved as a hidden draft. Close the form and finish it later from Hidden drafts?")) return; resetProductForm(); }} onSubmit={saveNewProduct} busy={upsertProduct.isPending || uploadProductImage.isPending || setProductActive.isPending} />}
           {lowStockProducts.length > 0 && <div className="rounded-2xl border border-violet-300/20 bg-violet-300/10 p-4 text-sm text-violet-100"><strong>{lowStockProducts.length} item{lowStockProducts.length === 1 ? "" : "s"}</strong> need stock attention: {lowStockProducts.map(item => item.name).join(", ")}.</div>}
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="premium-panel rounded-2xl p-4"><p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Live listings</p><p className="mt-2 text-2xl font-bold text-white">{products.data?.filter(product => product.active !== false).length ?? 0}</p><p className="mt-1 text-xs text-slate-500">Visible in the public shop</p></div>
             <div className="premium-panel rounded-2xl p-4"><p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Low stock</p><p className="mt-2 text-2xl font-bold text-violet-200">{lowStockProducts.length}</p><p className="mt-1 text-xs text-slate-500">Review before promising</p></div>
             <div className="premium-panel rounded-2xl p-4"><p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Catalogue</p><p className="mt-2 text-2xl font-bold text-emerald-200">{products.data?.length ? "Maintained" : "Needs setup"}</p><p className="mt-1 text-xs text-slate-500">Keep price, stock and fit details current</p></div>
           </div>
-          <div className="premium-panel overflow-hidden rounded-3xl">{products.isLoading ? <LoadingState label="Loading inventory" /> : filteredProducts.length ? <div className="divide-y">{filteredProducts.map(product => <ProductRow key={product.id} product={product} onSave={async payload => { await upsertProduct.mutateAsync(payload); }} onUpload={replaceProductImage} onRemove={() => { if (window.confirm(`Hide ${product.name} from the public shop? Existing order history and stock levels will be kept.`)) removeProduct.mutate({ id: product.id }); }} onToggleActive={active => setProductActive.mutate({ id: product.id, active })} busy={upsertProduct.isPending || uploadProductImage.isPending || removeProduct.isPending || setProductActive.isPending} />)}</div> : <EmptyState icon={Boxes} title={products.data?.length ? "No listings match this view" : "Your shop is ready for setup"} body={products.data?.length ? "Try another search or filter." : "Add the first part, laptop, accessory or service listing with its SKU, price and fulfilment details."} />}</div>
+          <div className="premium-panel overflow-hidden rounded-3xl">{products.isLoading ? <LoadingState label="Loading inventory" /> : filteredProducts.length ? <div className="divide-y">{filteredProducts.map(product => <ProductRow key={product.id} product={product} onSave={async payload => { await upsertProduct.mutateAsync(payload); }} onUpload={addProductImage} onRemove={() => { if (window.confirm(`Hide ${product.name} from the public shop? Existing order history and stock levels will be kept.`)) removeProduct.mutate({ id: product.id }); }} onToggleActive={active => setProductActive.mutateAsync({ id: product.id, active })} busy={upsertProduct.isPending || uploadProductImage.isPending || removeProduct.isPending || setProductActive.isPending} categorySuggestions={categorySuggestions} />)}</div> : <EmptyState icon={Boxes} title={products.data?.length ? "No listings match this view" : "Your shop is ready for setup"} body={products.data?.length ? "Try another search or filter." : "Add the first real product with its category, condition, price, stock and photos."} />}</div>
         </section>
       )}
 
@@ -459,59 +498,259 @@ function RepairRow({ row, technicians, note, onNoteChange, onUpdate, onAddNote, 
   );
 }
 
-function ProductRow({ product, onSave, onUpload, onRemove, onToggleActive, busy }: { product: any; onSave: (payload: any) => Promise<void>; onUpload: (id: number, file: File) => Promise<void>; onRemove: () => void; onToggleActive: (active: boolean) => void; busy: boolean }) {
+type ProductAvailabilityMode = "auto" | "out_of_stock" | "by_order";
+
+type ProductRowProps = {
+  product: CatalogProduct;
+  onSave: (payload: ProductUpsertPayload) => Promise<unknown>;
+  onUpload: (id: number, file: File) => Promise<void>;
+  onRemove: () => void;
+  onToggleActive: (active: boolean) => Promise<unknown>;
+  busy: boolean;
+  categorySuggestions: string[];
+};
+
+function ProductRow({ product, onSave, onUpload, onRemove, onToggleActive, busy, categorySuggestions }: ProductRowProps) {
   const [editing, setEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [draft, setDraft] = useState({ name: product.name, category: product.category, productType: product.productType ?? "part", description: product.description ?? "", compatibility: product.compatibility ?? "", price: String(product.price), stock: String(product.stock), availability: product.availability, reorderLevel: String(product.reorderLevel ?? 2), externalUrl: product.externalUrl ?? "" });
-  useEffect(() => { setDraft({ name: product.name, category: product.category, productType: product.productType ?? "part", description: product.description ?? "", compatibility: product.compatibility ?? "", price: String(product.price), stock: String(product.stock), availability: product.availability, reorderLevel: String(product.reorderLevel ?? 2), externalUrl: product.externalUrl ?? "" }); }, [product.id, product.name, product.category, product.productType, product.description, product.compatibility, product.price, product.stock, product.reorderLevel, product.availability, product.externalUrl]);
+  const [draft, setDraft] = useState({
+    name: product.name,
+    category: product.category,
+    productType: product.productType ?? "part",
+    condition: product.condition ?? "",
+    description: product.description ?? "",
+    compatibility: product.compatibility ?? "",
+    price: String(product.price),
+    stock: String(product.stock),
+    availabilityMode: (product.availability === "by_order" || product.availability === "out_of_stock" ? product.availability : "auto") as ProductAvailabilityMode,
+    reorderLevel: String(product.reorderLevel ?? 2),
+    externalUrl: product.externalUrl ?? "",
+  });
+  const images = getProductImageUrls(product);
+  const active = product.active !== false;
+  const availability = productAvailabilityLabel(product);
+
+  useEffect(() => {
+    setDraft({
+      name: product.name,
+      category: product.category,
+      productType: product.productType ?? "part",
+      condition: product.condition ?? "",
+      description: product.description ?? "",
+      compatibility: product.compatibility ?? "",
+      price: String(product.price),
+      stock: String(product.stock),
+      availabilityMode: (product.availability === "by_order" || product.availability === "out_of_stock" ? product.availability : "auto"),
+      reorderLevel: String(product.reorderLevel ?? 2),
+      externalUrl: product.externalUrl ?? "",
+    });
+  }, [product.id, product.name, product.category, product.productType, product.condition, product.description, product.compatibility, product.price, product.stock, product.reorderLevel, product.availability, product.externalUrl]);
+
   const update = (key: string, value: string) => setDraft(current => ({ ...current, [key]: value }));
   const save = async () => {
     setSaveError("");
     const price = Number(draft.price);
     const stock = Number(draft.stock);
     const reorderLevel = Number(draft.reorderLevel);
-    if (![price, stock, reorderLevel].every(value => Number.isSafeInteger(value) && value >= 0)) {
+    if (![price, stock, reorderLevel].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 2147483647)) {
       setSaveError("Enter whole, non-negative KES and stock values before saving.");
       return;
     }
+    if (!draft.category.trim() || draft.category.trim().length > 64) {
+      setSaveError("Enter a category from 1 to 64 characters.");
+      return;
+    }
+    if (!draft.condition) {
+      setSaveError("Choose the item condition before saving.");
+      return;
+    }
     try {
-      await onSave({ id: product.id, sku: product.sku, name: draft.name, category: draft.category, productType: draft.productType, description: draft.description || undefined, compatibility: draft.compatibility || undefined, externalUrl: draft.externalUrl || undefined, price, stock, availability: draft.availability, reorderLevel });
+      await onSave({
+        id: product.id,
+        sku: product.sku,
+        name: draft.name,
+        category: normalizeProductCategory(draft.category),
+        productType: draft.productType,
+        condition: (draft.productType === "service" ? "not_applicable" : draft.condition) as ProductCondition,
+        description: draft.description.trim() || undefined,
+        compatibility: draft.compatibility.trim() || undefined,
+        externalUrl: draft.externalUrl.trim() || undefined,
+        price,
+        stock,
+        availability: draft.availabilityMode === "auto" ? undefined : draft.availabilityMode,
+        reorderLevel,
+      });
       setEditing(false);
     } catch {
-      setSaveError("The change was not confirmed. Your edits are still open; check the record before trying again.");
+      setSaveError("The change was not confirmed. Your edits remain open; check the listing before retrying.");
     }
   };
-  const chooseReplacement = async (file: File | undefined) => {
-    if (!validateProductImage(file)) return;
-    setUploading(true); setSaveError("");
-    try { const cleaned = await prepareProductImage(file as File).catch(() => file as File); await onUpload(product.id, cleaned); }
-    catch { setSaveError("The image could not be saved. The current listing remains unchanged."); }
-    finally { setUploading(false); }
+
+  const addPhotos = async (files: File[]) => {
+    if (images.length + files.length > 5) {
+      setSaveError("A listing can have up to five photos.");
+      return;
+    }
+    for (const file of files) {
+      const error = productImageError(file);
+      if (error) { setSaveError(error); return; }
+    }
+    setUploading(true);
+    setSaveError("");
+    let saved = 0;
+    try {
+      for (const file of files) {
+        await onUpload(product.id, file);
+        saved += 1;
+      }
+    } catch {
+      setSaveError(saved ? `${saved} photo${saved === 1 ? " was" : "s were"} saved. Select the remaining photo${saved === 1 ? "" : "s"} to continue.` : "The photo could not be saved. The listing itself was not changed.");
+    } finally {
+      setUploading(false);
+    }
   };
-  const active = product.active !== false;
-  return <div className="flex flex-col gap-4 p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div className="flex min-w-0 items-start gap-4"><div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-primary/10">{product.imageUrl ? <img src={product.imageUrl} alt={`${product.name} listing`} className="h-full w-full bg-white object-contain p-1" /> : <div className="grid h-full w-full place-items-center text-primary">{draft.productType === "device" || product.category === "laptop_spare" ? <Laptop className="h-5 w-5" /> : <Smartphone className="h-5 w-5" />}</div>}</div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{product.name}</h3><Badge className="border-cyan-300/20 bg-cyan-300/10 text-cyan-200">{productTypeLabels[product.productType] ?? "Part"}</Badge><Badge className={active ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200" : "border-rose-300/20 bg-rose-300/10 text-rose-200"}>{active ? "Live in shop" : "Hidden"}</Badge><Badge className={statusTone(product.availability)}>{statusLabel(product.availability)}</Badge></div><p className="mt-1 text-xs text-muted-foreground">{product.sku} · {product.compatibility || "Compatibility note not added"}</p>{product.externalUrl && <a href={product.externalUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">External destination <ArrowUpRight className="h-3.5 w-3.5" /></a>}<label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-cyan-200"><UploadCloud className="h-3.5 w-3.5" />{uploading ? "Uploading image…" : product.imageUrl ? "Replace listing image" : "Add listing image"}<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading || busy} onChange={event => { const file = event.target.files?.[0]; event.currentTarget.value = ""; void chooseReplacement(file); }} /></label></div></div>{!editing && <div className="flex flex-wrap items-center gap-3 text-sm"><span className={`rounded-full px-3 py-1 font-semibold ${product.stock <= product.reorderLevel ? "border border-violet-300/20 bg-violet-300/10 text-violet-100" : "bg-muted text-muted-foreground"}`}>{product.stock} in stock</span><span className="font-semibold">KES {product.price.toLocaleString()}</span><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => { setSaveError(""); setEditing(true); }}>Edit listing</Button>{active ? <Button variant="outline" size="sm" onClick={onRemove} disabled={busy || uploading} className="text-rose-200 hover:text-rose-100"><Trash2 className="mr-1.5 h-3.5 w-3.5" />Hide</Button> : <Button variant="outline" size="sm" onClick={() => onToggleActive(true)} disabled={busy || uploading}>Publish again</Button>}</div></div>}</div>{saveError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-xs leading-5 text-rose-100">{saveError}</p>}{editing && <div className="grid gap-3 rounded-2xl bg-muted/50 p-4 sm:grid-cols-2"><label className="text-xs font-medium text-muted-foreground">Name<Input value={draft.name} onChange={event => update("name", event.target.value)} /></label><label className="text-xs font-medium text-muted-foreground">Listing type<select className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={draft.productType} onChange={event => update("productType", event.target.value)}><option value="part">Spare part</option><option value="device">Device / laptop</option><option value="accessory">Accessory</option><option value="service">Service</option></select></label><label className="text-xs font-medium text-muted-foreground">Category<select className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={draft.category} onChange={event => update("category", event.target.value)}><option value="phone_screen">Phone screen</option><option value="charging_port">Charging port</option><option value="battery">Battery</option><option value="laptop_spare">Laptop spare</option><option value="accessory">Accessory</option><option value="other">Other</option></select></label><label className="text-xs font-medium text-muted-foreground">Price (KES)<Input type="number" min="0" step="1" value={draft.price} onChange={event => update("price", event.target.value)} /></label><label className="text-xs font-medium text-muted-foreground">Stock<Input type="number" min="0" step="1" value={draft.stock} onChange={event => update("stock", event.target.value)} /></label><label className="text-xs font-medium text-muted-foreground">Reorder alert at<Input type="number" min="0" step="1" value={draft.reorderLevel} onChange={event => update("reorderLevel", event.target.value)} /></label><label className="text-xs font-medium text-muted-foreground">Availability<select className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={draft.availability} onChange={event => update("availability", event.target.value)}><option value="in_stock">In stock</option><option value="low_stock">Low stock</option><option value="out_of_stock">Out of stock</option><option value="by_order">By order</option></select></label><label className="text-xs font-medium text-muted-foreground sm:col-span-2">Compatibility<Input value={draft.compatibility} onChange={event => update("compatibility", event.target.value)} /></label><label className="text-xs font-medium text-muted-foreground sm:col-span-2">External website (optional)<Input type="url" value={draft.externalUrl} onChange={event => update("externalUrl", event.target.value)} placeholder="https://your-shop.example/item" /></label><label className="text-xs font-medium text-muted-foreground sm:col-span-2">Description<textarea className="mt-1 min-h-20 w-full rounded-md border bg-background p-3 text-sm" value={draft.description} onChange={event => update("description", event.target.value)} /></label><div className="flex items-center justify-end gap-2 sm:col-span-2"><Button type="button" variant="outline" size="sm" onClick={() => setEditing(false)}>Cancel</Button><Button type="button" size="sm" onClick={() => void save()} disabled={busy || uploading}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Save changes</Button></div></div>}</div>;
+
+  const toggleActive = async (next: boolean) => {
+    setSaveError("");
+    try {
+      await onToggleActive(next);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "The listing status could not be updated.");
+    }
+  };
+
+  return <article className="flex flex-col gap-4 p-5">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex min-w-0 gap-4">
+        <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-white/90">
+          {images[0] ? <img src={images[0]} alt={`${product.name} main photo`} className="h-full w-full object-contain p-1" /> : draft.productType === "device" ? <Smartphone className="h-6 w-6 text-primary" /> : <Boxes className="h-6 w-6 text-primary" />}
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold">{product.name}</h3>
+            <Badge className="border-cyan-300/20 bg-cyan-300/10 text-cyan-200">{productTypeLabels[product.productType] ?? "Product"}</Badge>
+            <Badge variant="outline">{normalizeProductCategory(product.category)}</Badge>
+            <Badge className={active ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200" : "border-amber-300/20 bg-amber-300/10 text-amber-100"}>{active ? "Live in shop" : "Hidden draft"}</Badge>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{product.sku} · {product.condition ? PRODUCT_CONDITION_LABELS[product.condition] : "Condition not stated"}</p>
+          <p className="mt-2 max-w-3xl text-sm leading-5 text-slate-300">{product.description?.trim() || "No product description has been provided."}</p>
+          {product.compatibility && <p className="mt-1 text-xs text-muted-foreground">Compatibility: {product.compatibility}</p>}
+          {product.externalUrl && <a href={product.externalUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">External destination <ArrowUpRight className="h-3.5 w-3.5" /></a>}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <label className={`inline-flex items-center gap-2 text-xs font-semibold ${images.length >= 5 ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer text-cyan-200"}`}>
+              <UploadCloud className="h-3.5 w-3.5" />{uploading ? "Uploading photos…" : images.length >= 5 ? "Five photos added" : "Add photos"}
+              <input type="file" multiple accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading || busy || images.length >= 5} onChange={event => { const files = Array.from(event.currentTarget.files ?? []); event.currentTarget.value = ""; void addPhotos(files); }} />
+            </label>
+            <span className="text-xs text-muted-foreground">{images.length} / 5 photos</span>
+          </div>
+          {images.length > 0 && <div className="mt-2 flex gap-2" aria-label={`${product.name} product photos`}>
+            {images.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`${product.name} photo ${index + 1}`} className="h-12 w-12 rounded-lg border border-white/10 bg-white object-contain p-1" loading="lazy" />)}
+          </div>}
+        </div>
+      </div>
+      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center lg:flex-col lg:items-end">
+        <div className="text-left sm:text-right"><p className="text-lg font-bold">{product.price > 0 ? `KES ${Number(product.price).toLocaleString("en-KE")}` : "Price to confirm"}</p><p className={`mt-1 text-xs ${product.availability === "out_of_stock" ? "text-rose-200" : product.availability === "low_stock" ? "text-amber-200" : "text-emerald-200"}`}>{availability}{product.productType !== "service" ? ` · ${product.stock} unit${product.stock === 1 ? "" : "s"}` : ""}</p></div>
+        {!editing && <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => { setSaveError(""); setEditing(true); }}>Edit listing</Button>
+          {active ? <Button variant="outline" size="sm" onClick={onRemove} disabled={busy || uploading} className="text-rose-200 hover:text-rose-100"><Trash2 className="mr-1.5 h-3.5 w-3.5" />Hide</Button> : <Button variant="outline" size="sm" onClick={() => void toggleActive(true)} disabled={busy || uploading}>Publish</Button>}
+        </div>}
+      </div>
+    </div>
+    {saveError && <p role="alert" className="rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-xs leading-5 text-rose-100">{saveError}</p>}
+    {editing && <div className="grid gap-3 rounded-2xl bg-muted/50 p-4 sm:grid-cols-2 lg:grid-cols-3">
+      <label className="text-xs font-medium text-muted-foreground">Title<Input value={draft.name} onChange={event => update("name", event.target.value)} maxLength={180} /></label>
+      <label className="text-xs font-medium text-muted-foreground">Listing type<select className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={draft.productType} onChange={event => { const productType = event.target.value as ProductType; setDraft(current => ({ ...current, productType, condition: productType === "service" ? "not_applicable" : current.condition === "not_applicable" ? "" : current.condition })); }}><option value="part">Spare part</option><option value="device">Phone / device</option><option value="accessory">Accessory</option><option value="service">Service</option></select></label>
+      <label className="text-xs font-medium text-muted-foreground">Category<input list={`product-categories-${product.id}`} value={draft.category} onChange={event => update("category", event.target.value)} maxLength={64} className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" /><datalist id={`product-categories-${product.id}`}>{categorySuggestions.map(label => <option key={label} value={label} />)}</datalist></label>
+      <label className="text-xs font-medium text-muted-foreground">Condition<select className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={draft.condition} disabled={draft.productType === "service"} onChange={event => update("condition", event.target.value)}><option value="">Choose condition</option>{PRODUCT_CONDITIONS.filter(value => draft.productType === "service" ? value === "not_applicable" : value !== "not_applicable").map(value => <option key={value} value={value}>{PRODUCT_CONDITION_LABELS[value]}</option>)}</select></label>
+      <label className="text-xs font-medium text-muted-foreground">Price (KES)<Input type="number" min="0" max="2147483647" step="1" value={draft.price} onChange={event => update("price", event.target.value)} /></label>
+      <label className="text-xs font-medium text-muted-foreground">Stock quantity<Input type="number" min="0" max="2147483647" step="1" value={draft.stock} onChange={event => update("stock", event.target.value)} /></label>
+      <label className="text-xs font-medium text-muted-foreground">Reorder alert at<Input type="number" min="0" max="2147483647" step="1" value={draft.reorderLevel} onChange={event => update("reorderLevel", event.target.value)} /></label>
+      <label className="text-xs font-medium text-muted-foreground">Availability override<select className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={draft.availabilityMode} onChange={event => update("availabilityMode", event.target.value)}><option value="auto">Automatic from stock</option><option value="out_of_stock">Out of stock</option><option value="by_order">Available by order</option></select></label>
+      <label className="text-xs font-medium text-muted-foreground">Model / compatibility<Input value={draft.compatibility} onChange={event => update("compatibility", event.target.value)} maxLength={2000} /></label>
+      <label className="text-xs font-medium text-muted-foreground lg:col-span-3">Description<textarea className="mt-1 min-h-20 w-full rounded-md border bg-background p-3 text-sm" value={draft.description} onChange={event => update("description", event.target.value)} maxLength={2000} /></label>
+      <label className="text-xs font-medium text-muted-foreground lg:col-span-3">External seller URL (optional)<Input type="url" value={draft.externalUrl} onChange={event => update("externalUrl", event.target.value)} maxLength={512} /></label>
+      <div className="flex items-center justify-end gap-2 lg:col-span-3"><Button type="button" variant="outline" size="sm" onClick={() => setEditing(false)}>Cancel</Button><Button type="button" size="sm" onClick={() => void save()} disabled={busy || uploading}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Save changes</Button></div>
+    </div>}
+  </article>;
 }
 
-function ProductForm({ form, setForm, image, setImage, onCancel, onSubmit, busy }: { form: { sku: string; name: string; category: string; productType: string; description: string; compatibility: string; price: string; stock: string; reorderLevel: string; externalUrl: string }; setForm: (value: any) => void; image: File | null; setImage: (value: File | null) => void; onCancel: () => void; onSubmit: () => void; busy: boolean }) {
-  const update = (key: string, value: string) => setForm({ ...form, [key]: value });
-  const [cleaning, setCleaning] = useState(false);
-  const [cleanupError, setCleanupError] = useState("");
-  const chooseImage = async (file: File | undefined) => {
-    if (!validateProductImage(file)) return;
-    setCleanupError("");
-    setImage(file as File);
-    setCleaning(true);
-    try {
-      const cleaned = await prepareProductImage(file as File);
-      setImage(cleaned);
-    } catch {
-      setCleanupError("Automatic cleanup was unavailable, so the original image is ready to upload.");
-    } finally {
-      setCleaning(false);
+function ProductForm({ form, setForm, images, setImages, pendingProductId, uploadedPhotoCount, categorySuggestions, onCancel, onSubmit, busy }: {
+  form: ProductFormState;
+  setForm: Dispatch<SetStateAction<ProductFormState>>;
+  images: File[];
+  setImages: React.Dispatch<React.SetStateAction<File[]>>;
+  pendingProductId: number | null;
+  uploadedPhotoCount: number;
+  categorySuggestions: string[];
+  onCancel: () => void;
+  onSubmit: () => Promise<void>;
+  busy: boolean;
+}) {
+  const [error, setError] = useState("");
+  const previews = useMemo(() => images.map(file => URL.createObjectURL(file)), [images]);
+  useEffect(() => () => previews.forEach(URL.revokeObjectURL), [previews]);
+  const physical = form.productType !== "service";
+  const update = (key: keyof ProductFormState, value: string) => setForm(current => ({ ...current, [key]: value } as ProductFormState));
+  const choosePhotos = (files: File[]) => {
+    setError("");
+    if (pendingProductId) { setError("Finish or close this saved draft before changing its photo list."); return; }
+    if (images.length + files.length > 5) { setError("Choose up to five photos for one product."); return; }
+    for (const file of files) {
+      const reason = productImageError(file);
+      if (reason) { setError(reason); return; }
     }
+    setImages(current => [...current, ...files]);
   };
-  const previewUrl = image ? URL.createObjectURL(image) : "";
-  const invalid = busy || !form.sku.trim() || !form.name.trim() || form.price === "" || form.stock === "" || Number(form.price) < 0 || Number(form.stock) < 0;
-  return <div className="premium-panel premium-panel-hover rounded-3xl p-6"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">New shop listing</p><h3 className="mt-2 text-xl font-semibold">Add a product</h3><p className="mt-2 text-sm text-muted-foreground">Publish a part, laptop, accessory or service with enough information for a customer to make the next decision.</p></div><button onClick={onCancel} aria-label="Close product form"><X className="h-5 w-5 text-muted-foreground" /></button></div><div className="mt-5 grid gap-4 sm:grid-cols-2"><label className="text-sm font-medium">SKU<Input className="mt-1" value={form.sku} onChange={event => update("sku", event.target.value)} placeholder="DPH-SCR-001" /></label><label className="text-sm font-medium">Name<Input className="mt-1" value={form.name} onChange={event => update("name", event.target.value)} placeholder="iPhone 11 Screen Assembly or HP EliteBook 840" /></label><label className="text-sm font-medium">Listing type<select className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={form.productType} onChange={event => update("productType", event.target.value)}><option value="part">Spare part</option><option value="device">Device / laptop</option><option value="accessory">Accessory</option><option value="service">Service</option></select></label><label className="text-sm font-medium">Category<select className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={form.category} onChange={event => update("category", event.target.value)}><option value="phone_screen">Phone screen</option><option value="charging_port">Charging port</option><option value="battery">Battery</option><option value="laptop_spare">Laptop spare</option><option value="accessory">Accessory</option><option value="other">Other</option></select></label><label className="text-sm font-medium">Price (KES)<Input className="mt-1" type="number" min="0" value={form.price} onChange={event => update("price", event.target.value)} /></label><label className="text-sm font-medium">Stock quantity<Input className="mt-1" type="number" min="0" value={form.stock} onChange={event => update("stock", event.target.value)} /><span className="mt-1 block text-xs font-normal text-muted-foreground">Use 0 when the item is available by order.</span></label><label className="text-sm font-medium">Reorder alert at<Input className="mt-1" type="number" min="0" value={form.reorderLevel} onChange={event => update("reorderLevel", event.target.value)} /><span className="mt-1 block text-xs font-normal text-muted-foreground">Owner alert when stock reaches this level.</span></label><label className="text-sm font-medium">Compatibility or model<Input className="mt-1" value={form.compatibility} onChange={event => update("compatibility", event.target.value)} placeholder="Exact brand, model or fit details" /></label><label className="text-sm font-medium">External website (optional)<Input className="mt-1" type="url" value={form.externalUrl} onChange={event => update("externalUrl", event.target.value)} placeholder="https://your-other-shop.example/item" /><span className="mt-1 block text-xs font-normal text-muted-foreground">Use this when the customer should complete the purchase on another website.</span></label><label className="text-sm font-medium sm:col-span-2">Description<textarea className="mt-1 min-h-24 w-full rounded-md border bg-background p-3 text-sm" value={form.description} onChange={event => update("description", event.target.value)} placeholder="Condition, included items, warranty, model details, and what the customer should know." /></label><label className="sm:col-span-2 rounded-2xl border border-dashed border-cyan-300/25 bg-cyan-300/[0.04] p-4 text-sm font-medium"><span className="flex items-center gap-2 text-cyan-200"><UploadCloud className="h-4 w-4" />Product photo <span className="text-xs font-normal text-slate-400">JPG, PNG or WebP · max 6 MB</span></span><p className="mt-2 text-xs leading-5 text-slate-400">Choose a product photo and free browser editing will remove the background, improve light, centre the product and prepare a consistent shop image before upload. The original stays on your device if editing fails.</p><input className="mt-3 block w-full text-sm text-slate-300 file:mr-3 file:rounded-full file:border-0 file:bg-cyan-300 file:px-4 file:py-2 file:font-semibold file:text-slate-950" type="file" accept="image/jpeg,image/png,image/webp" onChange={event => { void chooseImage(event.target.files?.[0]); }} /><div className="mt-3 flex items-center gap-3">{previewUrl && <img src={previewUrl} alt="Prepared product preview" className="h-20 w-20 rounded-xl border border-white/10 bg-white object-contain p-1" />}<span className="text-xs text-slate-400">{cleaning ? <span className="inline-flex items-center gap-2 text-cyan-200"><Loader2 className="h-3.5 w-3.5 animate-spin" />Preparing image locally…</span> : image ? <span className="inline-flex items-center gap-2 text-emerald-200"><WandSparkles className="h-3.5 w-3.5" />Ready: {image.name}</span> : "Use a clear product photo. The prepared preview is what will be uploaded."}</span></div>{cleanupError && <p className="mt-2 text-xs text-amber-200">{cleanupError}</p>}</label></div><div className="mt-5 flex justify-end gap-2"><Button variant="outline" onClick={onCancel}>Cancel</Button><Button onClick={onSubmit} disabled={invalid || cleaning}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}Publish listing</Button></div></div>;
+  const validate = () => {
+    if (!form.name.trim() || form.name.trim().length < 2) return "Enter the product title.";
+    if (!form.category.trim()) return "Choose or enter a category.";
+    if (!form.productType) return "Choose a listing type.";
+    if (physical && !form.condition) return "Choose the item's condition.";
+    if (form.price === "" || !/^\d+$/.test(form.price) || !Number.isSafeInteger(Number(form.price)) || Number(form.price) > 2147483647) return "Enter a whole-shilling KES price. Use 0 only when the shop will confirm a quote.";
+    if (form.stock === "" || !/^\d+$/.test(form.stock) || !Number.isSafeInteger(Number(form.stock)) || Number(form.stock) > 2147483647) return "Enter the actual whole-unit stock count.";
+    if (form.reorderLevel === "" || !/^\d+$/.test(form.reorderLevel) || !Number.isSafeInteger(Number(form.reorderLevel)) || Number(form.reorderLevel) > 2147483647) return "Enter a whole-unit reorder alert level.";
+    if (form.description.trim().length < 10) return "Add a clear product description of at least 10 characters.";
+    if (physical && images.length === 0) return "Add at least one product photo before publishing.";
+    return "";
+  };
+  const save = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const validationError = validate();
+    if (validationError) { setError(validationError); return; }
+    setError("");
+    try { await onSubmit(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "The listing could not be saved. It remains hidden until the required steps succeed."); }
+  };
+  const changeType = (productType: string) => setForm(current => ({ ...current, productType, condition: productType === "service" ? "not_applicable" : current.condition === "not_applicable" ? "" : current.condition }));
+
+  return <form onSubmit={save} className="premium-panel premium-panel-hover rounded-3xl p-5 sm:p-6">
+    <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+      <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">New shop listing</p><h3 className="mt-2 text-xl font-semibold">Product details</h3><p className="mt-1 text-sm text-muted-foreground">Only real product information is published.</p></div>
+      <button type="button" onClick={onCancel} aria-label="Close product form" className="rounded-lg p-2 text-muted-foreground hover:bg-white/5"><X className="h-5 w-5" /></button>
+    </div>
+    {pendingProductId && <p role="status" className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100">Hidden draft saved · {uploadedPhotoCount} of {images.length} photos uploaded. It will not appear in the shop until complete.</p>}
+    <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <label className="text-sm font-medium">Title<Input required minLength={2} maxLength={180} className="mt-1" value={form.name} onChange={event => update("name", event.target.value)} placeholder="e.g. iPhone 11 64 GB" /></label>
+      <label className="text-sm font-medium">Listing type<select required className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={form.productType} onChange={event => changeType(event.target.value)}><option value="">Choose type</option><option value="device">Phone / device</option><option value="part">Spare part</option><option value="accessory">Accessory</option><option value="service">Service</option></select></label>
+      <label className="text-sm font-medium">Shop category<input required list="product-category-suggestions" maxLength={64} className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={form.category} onChange={event => update("category", event.target.value)} placeholder="e.g. iPhone, Samsung, Accessories" /><datalist id="product-category-suggestions">{categorySuggestions.map(label => <option key={label} value={label} />)}</datalist></label>
+      <label className="text-sm font-medium">Condition<select required={physical} disabled={form.productType === "service"} className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm disabled:opacity-70" value={form.condition} onChange={event => update("condition", event.target.value)}><option value="">Choose condition</option>{PRODUCT_CONDITIONS.filter(value => physical ? value !== "not_applicable" : value === "not_applicable").map(value => <option key={value} value={value}>{PRODUCT_CONDITION_LABELS[value]}</option>)}</select></label>
+      <label className="text-sm font-medium">Price (KES)<Input required type="number" min="0" max="2147483647" step="1" className="mt-1" value={form.price} onChange={event => update("price", event.target.value)} placeholder="0 = confirm price" /><span className="mt-1 block text-xs text-muted-foreground">Enter the actual price; 0 means price to confirm.</span></label>
+      <label className="text-sm font-medium">Stock quantity<Input required type="number" min="0" max="2147483647" step="1" className="mt-1" value={form.stock} onChange={event => update("stock", event.target.value)} placeholder="Actual quantity" /></label>
+      <label className="text-sm font-medium">Availability override<select className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm" value={form.availabilityMode} onChange={event => update("availabilityMode", event.target.value)}><option value="auto">Automatic from stock</option><option value="out_of_stock">Out of stock</option><option value="by_order">Available by order</option></select></label>
+      <label className="text-sm font-medium">Reorder alert at<Input required type="number" min="0" max="2147483647" step="1" className="mt-1" value={form.reorderLevel} onChange={event => update("reorderLevel", event.target.value)} /></label>
+      <label className="text-sm font-medium">Model / compatibility<Input maxLength={2000} className="mt-1" value={form.compatibility} onChange={event => update("compatibility", event.target.value)} placeholder="Exact model or fit details" /></label>
+      <label className="text-sm font-medium">SKU (optional)<Input maxLength={80} className="mt-1" value={form.sku} onChange={event => update("sku", event.target.value)} placeholder="Assigned automatically if blank" /></label>
+      <label className="text-sm font-medium lg:col-span-3">Description<textarea required minLength={10} maxLength={2000} className="mt-1 min-h-24 w-full rounded-md border bg-background p-3 text-sm" value={form.description} onChange={event => update("description", event.target.value)} placeholder="Describe the real item, included accessories, known wear, warranty or service details." /></label>
+      <label className="text-sm font-medium lg:col-span-3">External seller URL (optional)<Input type="url" maxLength={512} className="mt-1" value={form.externalUrl} onChange={event => update("externalUrl", event.target.value)} placeholder="https://" /></label>
+      <fieldset className="rounded-2xl border border-dashed border-cyan-300/25 bg-cyan-300/[0.04] p-4 sm:col-span-2 lg:col-span-3" disabled={busy || Boolean(pendingProductId)}>
+        <legend className="px-1 text-sm font-semibold text-cyan-100">Product photos {physical ? "(required)" : "(optional for services)"}</legend>
+        <p className="text-xs text-muted-foreground">JPG, PNG or WebP · up to five photos · 6 MB each. Photos upload as selected; no automatic edits are applied.</p>
+        <input className="mt-3 block w-full text-sm text-slate-300 file:mr-3 file:rounded-full file:border-0 file:bg-cyan-300 file:px-4 file:py-2 file:font-semibold file:text-slate-950" type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={event => { const files = Array.from(event.currentTarget.files ?? []); event.currentTarget.value = ""; choosePhotos(files); }} />
+        {images.length > 0 && <div className="mt-4 flex flex-wrap gap-3">{images.map((file, index) => <div key={`${file.name}-${file.size}-${file.lastModified}`} className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/10 p-2"><img src={previews[index]} alt={`Preview of ${file.name}`} className="h-14 w-14 rounded-lg bg-white object-contain p-1" /><span className="max-w-36 truncate text-xs text-slate-300">{file.name}</span></div>)}</div>}
+      </fieldset>
+    </div>
+    {error && <p role="alert" className="mt-4 rounded-xl border border-rose-300/20 bg-rose-300/10 p-3 text-sm leading-5 text-rose-100">{error}</p>}
+    <div className="mt-5 flex flex-col-reverse justify-between gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center"><p className="text-xs leading-5 text-muted-foreground">New items stay hidden until required details and photos are saved.</p><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}{pendingProductId ? "Finish hidden draft" : "Publish to shop"}</Button></div></div>
+  </form>;
 }

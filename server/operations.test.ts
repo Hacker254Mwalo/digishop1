@@ -30,8 +30,15 @@ const paymentMocks = vi.hoisted(() => ({
   startGuestOrderPayment: vi.fn().mockResolvedValue({ status: "not_configured", message: "M-PESA is not enabled." }),
 }));
 
+const customerAuthMocks = vi.hoisted(() => ({
+  assertCustomerRequestOrigin: vi.fn(),
+  CustomerSignupRateLimitError: class CustomerSignupRateLimitError extends Error {},
+  registerPasswordCustomer: vi.fn().mockResolvedValue({ userId: "customer-user-id", username: "siaya_customer", phone: "254718114009" }),
+}));
+
 vi.mock("./db", () => dbMocks);
 vi.mock("./_core/daraja", () => paymentMocks);
+vi.mock("./_core/customerAuth", () => customerAuthMocks);
 
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
@@ -141,15 +148,17 @@ describe("owner operations", () => {
     expect(dbMocks.createOrderRequest).toHaveBeenCalledWith(expect.objectContaining({ submissionId: "102030405060708090A0B0C3" }), undefined);
   });
 
-  it("keeps customer account procedures separate from owner login", async () => {
+  it("keeps customer account procedures separate from owner login and permits SMS-free signup", async () => {
     const anonymous = appRouter.createCaller(contextFor(null));
     await expect(anonymous.customer.me()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
 
-    const customer = { id: "supabase-user-id", phone: "254718114009" };
-    const caller = appRouter.createCaller(contextFor(null, customer));
-    const profile = await caller.customer.register({ username: "Siaya_Customer" });
+    const caller = appRouter.createCaller(contextFor(null));
+    const profile = await caller.customer.register({ username: "Siaya_Customer", phone: "0718 114 009", password: "long-unique-password-2026" });
     expect(profile).toEqual({ username: "siaya_customer", phone: "254718114009" });
-    expect(dbMocks.saveCustomerAccount).toHaveBeenCalledWith({ userId: customer.id, phone: customer.phone, username: "siaya_customer" });
+    expect(customerAuthMocks.registerPasswordCustomer).toHaveBeenCalledWith(
+      { username: "siaya_customer", phone: "0718 114 009", password: "long-unique-password-2026" },
+      expect.any(Object),
+    );
   });
 
   it("requires a delivery area before accepting a delivery request", async () => {
@@ -187,10 +196,19 @@ describe("owner operations", () => {
 
   it("allows an owner to update inventory and process an order status", async () => {
     const caller = appRouter.createCaller(contextFor(owner));
-    await caller.admin.upsertProduct({ sku: "DPH-TEST-001", name: "Test replacement part", category: "accessory", price: 1200, stock: 4 });
+    await caller.admin.upsertProduct({ sku: "DPH-TEST-001", name: "Test replacement part", category: "accessory", productType: "accessory", condition: "new", description: "Test fixture only; not inserted into production.", price: 1200, stock: 4 });
     await caller.admin.updateOrder({ id: 12, status: "confirmed" });
-    expect(dbMocks.upsertProduct).toHaveBeenCalled();
+    expect(dbMocks.upsertProduct).toHaveBeenCalledWith(expect.objectContaining({ category: "Accessories", productType: "accessory", condition: "new" }));
     expect(dbMocks.updateOrderStatus).toHaveBeenCalledWith({ id: 12, status: "confirmed" });
+  });
+
+  it("rejects blank categories and conditions that do not match the listing type", async () => {
+    dbMocks.upsertProduct.mockClear();
+    const caller = appRouter.createCaller(contextFor(owner));
+    const base = { name: "Phone listing", category: "iPhone", productType: "device" as const, price: 25000, stock: 1 };
+    await expect(caller.admin.upsertProduct({ ...base, category: " ", condition: "used" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller.admin.upsertProduct({ ...base, condition: "not_applicable" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(dbMocks.upsertProduct).not.toHaveBeenCalled();
   });
 
   it("allows an owner to maintain the technician roster", async () => {

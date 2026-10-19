@@ -2,7 +2,9 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "@shared/const";
 import { normalizeKenyanMpesaPhone } from "@shared/phone";
+import { normalizeProductCategory, PRODUCT_CONDITIONS } from "@shared/productCatalog";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { assertCustomerRequestOrigin, CustomerSignupRateLimitError, registerPasswordCustomer } from "./_core/customerAuth";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, customerProcedure, publicProcedure, router } from "./_core/trpc";
 import { logoutOwner, setOwnerSession, signInOwner } from "./_core/ownerAuth";
@@ -29,7 +31,6 @@ import {
   upsertProduct,
   removeProduct,
   setProductActive,
-  saveCustomerAccount,
   uploadProductImage,
 } from "./db";
 import { adminCopilot, productAdvisor, repairHelper } from "./ai";
@@ -70,6 +71,30 @@ const orderRequestInput = z.object({
   }
 });
 
+const upsertProductInput = z.object({
+  id: z.number().int().positive().optional(),
+  sku: z.string().trim().max(80).optional(),
+  name: z.string().trim().min(2).max(180),
+  category: z.string().trim().min(1).max(64).transform(normalizeProductCategory),
+  productType: z.enum(["part", "device", "accessory", "service"]),
+  condition: z.enum(PRODUCT_CONDITIONS),
+  description: z.string().trim().max(2000).optional(),
+  compatibility: z.string().trim().max(2000).optional(),
+  imageUrl: z.string().url().max(512).optional(),
+  externalUrl: z.string().url().max(512).optional(),
+  price: z.number().int().min(0).max(2147483647),
+  stock: z.number().int().min(0).max(2147483647),
+  reorderLevel: z.number().int().min(0).max(2147483647).optional(),
+  availability: z.enum(["by_order", "out_of_stock"]).optional(),
+}).superRefine((product, ctx) => {
+  if (product.productType === "service" && product.condition !== "not_applicable") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["condition"], message: "Set service condition to Not applicable." });
+  }
+  if (product.productType !== "service" && product.condition === "not_applicable") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["condition"], message: "Choose the condition of the physical product." });
+  }
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -92,17 +117,24 @@ export const appRouter = router({
       const account = await getCustomerAccount(ctx.customer.id, ctx.customer.phone);
       return account ? { username: account.username, phone: account.phone } : null;
     }),
-    register: customerProcedure.input(z.object({
+    register: publicProcedure.input(z.object({
       username: z.string().trim().min(3).max(24).regex(/^[a-zA-Z0-9_]+$/).transform(value => value.toLowerCase()),
-    })).mutation(async ({ ctx, input }) => {
+      phone: z.string().trim().min(7).max(40),
+      password: z.string().min(12).max(128),
+    }).strict()).mutation(async ({ ctx, input }) => {
+      assertCustomerRequestOrigin(ctx.req);
+      if (typeof ctx.res.setHeader === "function") ctx.res.setHeader("Cache-Control", "no-store, private");
       try {
-        const account = await saveCustomerAccount({ userId: ctx.customer.id, phone: ctx.customer.phone, username: input.username });
+        const account = await registerPasswordCustomer(input, ctx.req);
         return { username: account.username, phone: account.phone };
       } catch (error) {
         if (error instanceof CustomerAccountConflictError) {
-          throw new TRPCError({ code: "CONFLICT", message: error.message });
+          throw new TRPCError({ code: "CONFLICT", message: "These details are already in use. Sign in or choose different details." });
         }
-        throw error;
+        if (error instanceof CustomerSignupRateLimitError) {
+          throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many account attempts. Please wait and try again later." });
+        }
+        throw new TRPCError({ code: "BAD_REQUEST", message: "We couldn't create the account. Check the details or try again later." });
       }
     }),
     orders: customerProcedure.query(({ ctx }) => listCustomerOrders(ctx.customer.id)),
@@ -153,7 +185,7 @@ export const appRouter = router({
     upsertTechnician: adminProcedure.input(z.object({ id: z.number().int().positive().optional(), name: z.string().trim().min(2).max(160), phone: z.string().trim().max(40).optional(), specialty: z.string().trim().max(160).optional(), active: z.boolean().optional() })).mutation(({ input }) => upsertTechnician(input)),
     updateRepair: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["received", "diagnostics", "awaiting_approval", "in_repair", "ready", "collected", "cancelled"]).optional(), technicianId: z.number().int().positive().nullable().optional(), quotedAmount: z.number().int().nonnegative().nullable().optional() })).mutation(({ input }) => updateRepairTicket(input)),
     addNote: adminProcedure.input(z.object({ ticketId: z.number().int().positive(), note: z.string().trim().min(2).max(4000) })).mutation(({ ctx, input }) => addRepairNote({ ...input, authorId: ctx.user.id })),
-    upsertProduct: adminProcedure.input(z.object({ id: z.number().int().positive().optional(), sku: z.string().trim().min(1).max(80), name: z.string().trim().min(2).max(180), category: z.enum(["phone_screen", "charging_port", "battery", "laptop_spare", "accessory", "other"]), productType: z.enum(["part", "device", "accessory", "service"]).optional(), description: z.string().trim().max(2000).optional(), compatibility: z.string().trim().max(2000).optional(), imageUrl: z.string().url().max(512).optional(), externalUrl: z.string().url().max(512).optional(), price: z.number().int().nonnegative(), stock: z.number().int().nonnegative(), reorderLevel: z.number().int().nonnegative().optional(), availability: z.enum(["in_stock", "low_stock", "out_of_stock", "by_order"]).optional() })).mutation(({ input }) => upsertProduct(input)),
+    upsertProduct: adminProcedure.input(upsertProductInput).mutation(({ input }) => upsertProduct(input)),
     uploadProductImage: adminProcedure.input(z.object({ id: z.number().int().positive(), fileName: z.string().trim().min(1).max(180), mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]), base64: z.string().min(100).max(8500000) })).mutation(({ input }) => uploadProductImage(input)),
     removeProduct: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => removeProduct(input)),
     setProductActive: adminProcedure.input(z.object({ id: z.number().int().positive(), active: z.boolean() })).mutation(({ input }) => setProductActive(input)),

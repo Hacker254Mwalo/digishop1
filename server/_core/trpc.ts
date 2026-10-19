@@ -30,10 +30,13 @@ export const protectedProcedure = t.procedure.use(requireUser);
 export const customerProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
+    if (typeof ctx.res.setHeader === "function") {
+      ctx.res.setHeader("Cache-Control", "private, no-store");
+    }
     if (!ctx.customer) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
-        message: "Sign in with a verified phone number to access your customer account.",
+        message: "Sign in to access your customer account.",
       });
     }
 

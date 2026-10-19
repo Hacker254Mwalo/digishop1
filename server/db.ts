@@ -1,8 +1,17 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ENV } from "./_core/env";
 import { storagePut } from "./storage";
 import { normalizeKenyanMpesaPhone } from "@shared/phone";
+import {
+  deriveProductAvailability,
+  getProductImageUrls,
+  normalizeProductCategory,
+  type ProductAvailability,
+  type ProductCondition,
+  type ProductType,
+} from "@shared/productCatalog";
+import { decodeProductImage } from "./_core/productImages";
 
 type CustomerInput = { name: string; phone: string; email?: string; location?: string };
 type DeviceInput = { type: "phone" | "laptop" | "tablet" | "electronics" | "other"; brand: string; model: string; serialNumber?: string; notes?: string };
@@ -22,14 +31,26 @@ export async function isCustomerAccountSchemaReady(): Promise<boolean> {
   try {
     const db = await getDb();
     if (!db) return false;
-    const [accounts, orders] = await Promise.all([
+    const [accounts, orders, signupLimits] = await Promise.all([
       db.from("customerAccounts").select("userId,username,phone,createdAt").limit(0),
       db.from("orderRequests").select("accountUserId").limit(0),
+      db.from("customerSignupRateLimits").select("keyHash,attempts,windowStartedAt").limit(0),
     ]);
-    return !accounts.error && !orders.error;
+    return !accounts.error && !orders.error && !signupLimits.error;
   } catch {
     return false;
   }
+}
+
+export async function consumeCustomerSignupAttempt(keyHash: string, windowSeconds: number, maxAttempts: number) {
+  const db = await requireDb();
+  const { data, error } = await db.rpc("consume_customer_signup_attempt", {
+    p_key_hash: keyHash,
+    p_window_seconds: windowSeconds,
+    p_max_attempts: maxAttempts,
+  });
+  if (error) throw new Error(error.message);
+  return data === true;
 }
 
 async function requireDb() {
@@ -334,28 +355,83 @@ export async function addRepairNote(input: { ticketId: number; authorId: number;
 }
 
 export async function uploadProductImage(input: { id: number; fileName: string; mimeType: "image/jpeg" | "image/png" | "image/webp"; base64: string }) {
-  const bytes = Buffer.from(input.base64, "base64");
-  if (!bytes.length) throw new Error("The selected image is empty");
-  if (bytes.length > 6 * 1024 * 1024) throw new Error("Product images must be 6 MB or smaller");
-  const extension = input.mimeType === "image/png" ? "png" : input.mimeType === "image/webp" ? "webp" : "jpg";
-  const uploaded = await storagePut(`products/${input.id}/${Date.now()}.${extension}`, bytes, input.mimeType);
+  const bytes = decodeProductImage(input.base64, input.mimeType);
   const db = await requireDb();
-  const { data, error } = await db.from("products").update({ imageUrl: uploaded.url, updatedAt: new Date() }).eq("id", input.id).select("id").maybeSingle();
+  const product = await maybe(db.from("products").select("id,imageUrl,imageUrls").eq("id", input.id).limit(1).maybeSingle());
+  if (!product) throw new Error("Product was not found");
+  if (getProductImageUrls(product).length >= 5) throw new Error("A product can have at most five photos");
+
+  const extension = input.mimeType === "image/png" ? "png" : input.mimeType === "image/webp" ? "webp" : "jpg";
+  const uploaded = await storagePut(`products/${input.id}/${randomUUID()}.${extension}`, bytes, input.mimeType);
+  const { data, error } = await db.rpc("append_product_image", {
+    p_product_id: input.id,
+    p_image_url: uploaded.url,
+  });
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Product was not found");
-  return { imageUrl: uploaded.url } as const;
+  if (!Array.isArray(data) || data.some(url => typeof url !== "string")) {
+    throw new Error("The product photo was uploaded but could not be confirmed in the gallery");
+  }
+  return { imageUrl: data[0] ?? uploaded.url, imageUrls: data as string[] } as const;
 }
 
-export async function upsertProduct(input: { id?: number; sku: string; name: string; category: "phone_screen" | "charging_port" | "battery" | "laptop_spare" | "accessory" | "other"; productType?: "part" | "device" | "accessory" | "service"; description?: string; compatibility?: string; imageUrl?: string; externalUrl?: string; price: number; stock: number; reorderLevel?: number; availability?: "in_stock" | "low_stock" | "out_of_stock" | "by_order" }) {
+export async function upsertProduct(input: {
+  id?: number;
+  sku?: string;
+  name: string;
+  category: string;
+  productType: ProductType;
+  condition: ProductCondition;
+  description?: string;
+  compatibility?: string;
+  imageUrl?: string;
+  externalUrl?: string;
+  price: number;
+  stock: number;
+  reorderLevel?: number;
+  availability?: "by_order" | "out_of_stock";
+}) {
   const db = await requireDb();
-  const values = clean({ sku: input.sku, name: input.name, category: input.category, productType: input.productType ?? "part", description: input.description, compatibility: input.compatibility, imageUrl: input.imageUrl, externalUrl: input.externalUrl || null, price: input.price, stock: input.stock, reorderLevel: input.reorderLevel ?? 2, availability: input.availability ?? (input.stock > 2 ? "in_stock" : input.stock > 0 ? "low_stock" : "out_of_stock"), updatedAt: new Date() });
+  const category = normalizeProductCategory(input.category);
+  const reorderLevel = input.reorderLevel ?? 2;
+  if (!category || category.length > 64) throw new Error("Enter a product category from 1 to 64 characters");
+  if (![input.price, input.stock, reorderLevel].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 2147483647)) {
+    throw new Error("Price, stock and reorder level must be whole, non-negative values within the supported range");
+  }
+  if (input.productType === "service" ? input.condition !== "not_applicable" : input.condition === "not_applicable") {
+    throw new Error("Choose a condition that matches the listing type");
+  }
+
+  const availability = deriveProductAvailability({
+    stock: input.stock,
+    reorderLevel,
+    productType: input.productType,
+    availability: input.availability,
+  });
+  const generatedSku = `DPH-${Date.now().toString(36).toUpperCase()}-${randomBytes(4).toString("hex").toUpperCase()}`;
+  const sku = input.sku?.trim() || generatedSku;
+  const values = clean({
+    sku: input.id ? input.sku?.trim() || undefined : sku,
+    name: input.name.trim(),
+    category,
+    productType: input.productType,
+    condition: input.condition,
+    description: input.description?.trim() || undefined,
+    compatibility: input.compatibility?.trim() || undefined,
+    imageUrl: input.imageUrl,
+    externalUrl: input.externalUrl || null,
+    price: input.price,
+    stock: input.stock,
+    reorderLevel,
+    availability,
+    updatedAt: new Date(),
+  });
   if (input.id) {
     const { data, error } = await db.from("products").update(values).eq("id", input.id).select("id").maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) throw new Error("Product was not found");
     return { success: true, id: input.id } as const;
   }
-  const { data, error } = await db.from("products").insert(values).select("id").single();
+  const { data, error } = await db.from("products").insert({ ...values, sku, active: false }).select("id").single();
   if (error) throw new Error(error.message);
   return { success: true, id: data.id as number } as const;
 }
@@ -370,7 +446,40 @@ export async function removeProduct(input: { id: number }) {
 
 export async function setProductActive(input: { id: number; active: boolean }) {
   const db = await requireDb();
-  const { data, error } = await db.from("products").update({ active: input.active, updatedAt: new Date() }).eq("id", input.id).select("id").maybeSingle();
+  const product = await maybe(db.from("products")
+    .select("id,name,category,productType,condition,description,imageUrl,imageUrls,price,stock,reorderLevel,availability")
+    .eq("id", input.id)
+    .limit(1)
+    .maybeSingle());
+  if (!product) throw new Error("Product was not found");
+
+  let availability: ProductAvailability | undefined;
+  if (input.active) {
+    if (!String(product.category ?? "").trim() || !String(product.name ?? "").trim()) {
+      throw new Error("Add a product name and category before publishing");
+    }
+    if (String(product.description ?? "").trim().length < 10) {
+      throw new Error("Add a useful product description before publishing");
+    }
+    if (product.productType === "service") {
+      if (product.condition !== "not_applicable") throw new Error("Set the service condition to Not applicable before publishing");
+    } else {
+      if (!product.condition || product.condition === "not_applicable") throw new Error("Choose the product condition before publishing");
+      if (!getProductImageUrls(product).length) throw new Error("Add at least one product photo before publishing");
+    }
+    availability = deriveProductAvailability({
+      stock: Number(product.stock),
+      reorderLevel: Number(product.reorderLevel),
+      productType: product.productType,
+      availability: product.availability,
+    });
+  }
+
+  const { data, error } = await db.from("products")
+    .update(clean({ active: input.active, availability, updatedAt: new Date() }))
+    .eq("id", input.id)
+    .select("id")
+    .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Product was not found");
   return { success: true } as const;
